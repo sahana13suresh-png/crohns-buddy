@@ -1,0 +1,81 @@
+/**
+ * Symptom Tracker localStorage persistence utilities.
+ *
+ * Stores TrackerEntry objects keyed by date string in localStorage
+ * under the key "crohns-buddy-tracker-entries".
+ */
+
+import { TrackerEntry } from './types';
+
+const STORAGE_KEY = 'crohns-buddy-tracker-entries';
+
+export type TrackerEntries = Record<string, TrackerEntry>;
+
+/**
+ * Reads all tracker entries from localStorage.
+ * Returns an empty record if no entries exist or localStorage is unavailable.
+ */
+export function getAllEntries(): TrackerEntries {
+  if (typeof window === 'undefined') return {};
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if (!raw) return {};
+    return JSON.parse(raw) as TrackerEntries;
+  } catch {
+    return {};
+  }
+}
+
+/**
+ * Gets a single tracker entry for a specific date.
+ * Returns undefined if no entry exists for that date.
+ */
+export function getEntry(date: string): TrackerEntry | undefined {
+  const entries = getAllEntries();
+  return entries[date];
+}
+
+/**
+ * Saves a tracker entry for a specific date.
+ * Overwrites any existing entry for that date.
+ * Throws if localStorage is full (QuotaExceededError).
+ */
+export function saveEntry(entry: TrackerEntry): void {
+  const entries = getAllEntries();
+  entries[entry.date] = entry;
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(entries));
+}
+
+/**
+ * Deletes a tracker entry for a specific date.
+ * No-op if the entry doesn't exist.
+ */
+export function deleteEntry(date: string): void {
+  const entries = getAllEntries();
+  delete entries[date];
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(entries));
+}
+
+/**
+ * Returns an array of date strings that have entries.
+ * Useful for highlighting days on the calendar.
+ */
+export function getDatesWithEntries(): string[] {
+  const entries = getAllEntries();
+  return Object.keys(entries);
+}
+
+/**
+ * Checks whether localStorage is available and writable.
+ */
+export function isStorageAvailable(): boolean {
+  if (typeof window === 'undefined') return false;
+  try {
+    const testKey = '__crohns_buddy_storage_test__';
+    localStorage.setItem(testKey, '1');
+    localStorage.removeItem(testKey);
+    return true;
+  } catch {
+    return false;
+  }
+}

@@ -1,0 +1,26 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 80" width="320" height="80">
+  <!-- Light blue background -->
+  <rect width="320" height="80" rx="12" fill="#eff6ff"/>
+  
+  <!-- Heart decoration (left side) -->
+  <path d="M30 30 C30 24, 38 20, 42 26 C46 20, 54 24, 54 30 C54 40, 42 48, 42 48 C42 48, 30 40, 30 30 Z" 
+        fill="#3b82f6" opacity="0.8"/>
+  
+  <!-- "Crohn's Buddy" text -->
+  <text x="160" y="46" text-anchor="middle" font-family="Inter, system-ui, sans-serif" 
+        font-size="24" font-weight="700" fill="#1d4ed8">
+    Crohn's Buddy
+  </text>
+  
+  <!-- Sparkle decoration (right side, top) -->
+  <path d="M275 20 L277 26 L283 28 L277 30 L275 36 L273 30 L267 28 L273 26 Z" 
+        fill="#60a5fa"/>
+  
+  <!-- Sparkle decoration (right side, bottom) -->
+  <path d="M290 40 L291.5 44 L295.5 45.5 L291.5 47 L290 51 L288.5 47 L284.5 45.5 L288.5 44 Z" 
+        fill="#93c5fd"/>
+  
+  <!-- Small sparkle (left of main text) -->
+  <path d="M62 22 L63 25 L66 26 L63 27 L62 30 L61 27 L58 26 L61 25 Z" 
+        fill="#60a5fa" opacity="0.7"/>
+</svg>
