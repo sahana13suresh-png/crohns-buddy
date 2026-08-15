@@ -18,6 +18,15 @@ import {
   serverTimestamp,
   Unsubscribe,
 } from 'firebase/firestore';
+import {
+  getAuth,
+  Auth,
+  GoogleAuthProvider,
+  signInWithPopup,
+  signOut as firebaseSignOut,
+  onAuthStateChanged,
+  User,
+} from 'firebase/auth';
 import { ForumMessage } from './types';
 
 // ─── Firebase Configuration ────────────────────────────────────────────────────
@@ -48,6 +57,47 @@ export function getDb(): Firestore {
     db = getFirestore(getFirebaseApp());
   }
   return db;
+}
+
+// ─── Authentication ────────────────────────────────────────────────────────────
+
+let auth: Auth;
+
+export function getAuthInstance(): Auth {
+  if (!auth) {
+    auth = getAuth(getFirebaseApp());
+  }
+  return auth;
+}
+
+/**
+ * Sign in with Google popup.
+ * Returns the authenticated user or null on failure.
+ */
+export async function signInWithGoogle(): Promise<User | null> {
+  try {
+    const provider = new GoogleAuthProvider();
+    const result = await signInWithPopup(getAuthInstance(), provider);
+    return result.user;
+  } catch (error) {
+    console.error('Google sign-in failed:', error);
+    return null;
+  }
+}
+
+/**
+ * Sign out the current user.
+ */
+export async function signOut(): Promise<void> {
+  await firebaseSignOut(getAuthInstance());
+}
+
+/**
+ * Subscribe to auth state changes.
+ * Returns an unsubscribe function.
+ */
+export function onAuthChange(callback: (user: User | null) => void): () => void {
+  return onAuthStateChanged(getAuthInstance(), callback);
 }
 
 // ─── Firestore Collection ──────────────────────────────────────────────────────

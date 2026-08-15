@@ -4,7 +4,7 @@
 
 @layer base {
   body {
-    @apply bg-white text-gray-800 font-sans antialiased;
+    @apply bg-brand-50 text-brand-800 font-sans antialiased;
   }
 
   h1,
@@ -13,11 +13,11 @@
   h4,
   h5,
   h6 {
-    @apply text-brand-800 font-bold;
+    @apply text-brand-800 font-heading uppercase tracking-wide;
   }
 
   h1 {
-    @apply text-3xl md:text-4xl;
+    @apply text-4xl md:text-5xl lg:text-6xl;
   }
 
   h2 {
@@ -25,37 +25,37 @@
   }
 
   h3 {
-    @apply text-xl md:text-2xl;
-  }
-
-  h4 {
     @apply text-lg md:text-xl;
   }
 
+  h4 {
+    @apply text-base md:text-lg;
+  }
+
   a {
-    @apply text-brand-600 hover:text-brand-800 underline transition-colors;
+    @apply text-brand-400 hover:opacity-70 no-underline transition-opacity duration-200;
   }
 
   /* Focus styles for accessibility */
   :focus-visible {
-    @apply outline-2 outline-offset-2 outline-brand-500;
+    @apply outline-2 outline-offset-2 outline-brand-400;
   }
 }
 
 @layer components {
   .btn-primary {
-    @apply bg-brand-600 text-white px-4 py-2 rounded-lg font-medium
-           hover:bg-brand-700 focus-visible:outline-brand-500
-           transition-colors disabled:opacity-50 disabled:cursor-not-allowed;
+    @apply bg-brand-800 text-brand-50 px-6 py-3 rounded-sm font-sans text-sm uppercase tracking-widest
+           hover:opacity-80 focus-visible:outline-brand-400
+           transition-opacity duration-200 disabled:opacity-40 disabled:cursor-not-allowed;
   }
 
   .btn-secondary {
-    @apply bg-brand-100 text-brand-700 px-4 py-2 rounded-lg font-medium
-           hover:bg-brand-200 focus-visible:outline-brand-500
-           transition-colors disabled:opacity-50 disabled:cursor-not-allowed;
+    @apply bg-transparent text-brand-800 px-6 py-3 rounded-sm font-sans text-sm uppercase tracking-widest
+           border border-brand-800/20 hover:border-brand-800/50
+           transition-all duration-200 disabled:opacity-40 disabled:cursor-not-allowed;
   }
 
-  .card {
-    @apply bg-white border border-brand-100 rounded-xl p-6 shadow-sm;
+  .divider {
+    @apply border-t border-brand-800/10;
   }
 }

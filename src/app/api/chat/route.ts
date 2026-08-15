@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { ChatRequest, ChatResponse } from '@/lib/types';
+import { invokeBedrockClaude } from '@/lib/bedrock';
 
 export async function POST(request: NextRequest): Promise<NextResponse<ChatResponse>> {
   try {
@@ -21,9 +22,8 @@ export async function POST(request: NextRequest): Promise<NextResponse<ChatRespo
       );
     }
 
-    const apiKey = process.env.OPENAI_API_KEY;
-    if (!apiKey) {
-      console.error('OPENAI_API_KEY is not configured');
+    if (!process.env.AWS_BEARER_TOKEN_BEDROCK) {
+      console.error('AWS_BEARER_TOKEN_BEDROCK is not configured');
       return NextResponse.json(
         { success: false, error: 'The AI service is not configured. Please contact support.' },
         { status: 500 }
@@ -33,9 +33,8 @@ export async function POST(request: NextRequest): Promise<NextResponse<ChatRespo
     // Build the system prompt with meal plan context
     const systemPrompt = buildSystemPrompt(currentMealPlan);
 
-    // Build messages array for OpenAI
+    // Build messages array for Bedrock (Anthropic format)
     const messages = [
-      { role: 'system' as const, content: systemPrompt },
       ...conversationHistory.map((msg) => ({
         role: msg.role as 'user' | 'assistant',
         content: msg.content,
@@ -43,74 +42,30 @@ export async function POST(request: NextRequest): Promise<NextResponse<ChatRespo
       { role: 'user' as const, content: message },
     ];
 
-    // Call OpenAI API with 60-second timeout
-    const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 60000);
-
+    // Call Anthropic Claude via Bedrock
     try {
-      const response = await fetch('https://api.openai.com/v1/chat/completions', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${apiKey}`,
-        },
-        body: JSON.stringify({
-          model: 'gpt-4o-mini',
-          messages,
-          temperature: 0.7,
-          max_tokens: 1024,
-        }),
-        signal: controller.signal,
+      const reply = await invokeBedrockClaude({
+        systemPrompt,
+        messages,
+        maxTokens: 1024,
+        temperature: 0.7,
       });
 
-      clearTimeout(timeoutId);
-
-      if (!response.ok) {
-        const status = response.status;
-
-        if (status === 429) {
-          return NextResponse.json(
-            { success: false, error: 'The service is busy. Please wait a moment and try again.' },
-            { status: 429 }
-          );
-        }
-
-        if (status >= 500) {
-          return NextResponse.json(
-            { success: false, error: 'The AI service is temporarily unavailable. Please try again later.' },
-            { status: 502 }
-          );
-        }
-
-        return NextResponse.json(
-          { success: false, error: 'We received an unexpected response. Please try again.' },
-          { status: 502 }
-        );
-      }
-
-      const data = await response.json();
-
-      if (!data.choices || !data.choices[0]?.message?.content) {
-        return NextResponse.json(
-          { success: false, error: 'We received an unexpected response. Please try again.' },
-          { status: 502 }
-        );
-      }
-
-      const reply = data.choices[0].message.content;
-
       return NextResponse.json({ success: true, reply });
-    } catch (fetchError: unknown) {
-      clearTimeout(timeoutId);
+    } catch (error: unknown) {
+      console.error('Bedrock API error:', error);
 
-      if (fetchError instanceof Error && fetchError.name === 'AbortError') {
+      if (error instanceof Error && error.name === 'ThrottlingException') {
         return NextResponse.json(
-          { success: false, error: 'The AI service is taking too long. Please try again.' },
-          { status: 504 }
+          { success: false, error: 'The service is busy. Please wait a moment and try again.' },
+          { status: 429 }
         );
       }
 
-      throw fetchError;
+      return NextResponse.json(
+        { success: false, error: 'The AI service is temporarily unavailable. Please try again later.' },
+        { status: 502 }
+      );
     }
   } catch (error: unknown) {
     console.error('Chat API error:', error);

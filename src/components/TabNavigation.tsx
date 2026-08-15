@@ -2,7 +2,7 @@
 
 import { useRef, useCallback, KeyboardEvent } from 'react';
 
-export type TabId = 'welcome' | 'about' | 'tracker' | 'planner' | 'resources';
+export type TabId = 'welcome' | 'about' | 'tracker' | 'planner' | 'resources' | 'contact';
 
 export interface Tab {
   id: TabId;
@@ -15,6 +15,7 @@ export const TABS: Tab[] = [
   { id: 'tracker', label: 'Symptom Tracker' },
   { id: 'planner', label: 'AI Meal Planner' },
   { id: 'resources', label: 'Resources' },
+  { id: 'contact', label: 'Contact Us' },
 ];
 
 export interface TabNavigationProps {
@@ -72,7 +73,7 @@ export default function TabNavigation({ activeTab, onTabChange }: TabNavigationP
       <div
         role="tablist"
         aria-label="Site sections"
-        className="flex flex-wrap gap-1 bg-brand-800 p-1 rounded-lg"
+        className="flex gap-8 overflow-x-auto"
       >
         {TABS.map((tab, index) => {
           const isActive = activeTab === tab.id;
@@ -88,12 +89,11 @@ export default function TabNavigation({ activeTab, onTabChange }: TabNavigationP
               onClick={() => onTabChange(tab.id)}
               onKeyDown={(e) => handleKeyDown(e, index)}
               className={`
-                px-4 py-2 rounded-md text-sm font-medium transition-colors
-                focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white
-                ${
-                  isActive
-                    ? 'bg-brand-600 text-white shadow-sm'
-                    : 'text-brand-200 hover:text-white hover:bg-brand-700'
+                relative py-4 text-xs uppercase tracking-widest whitespace-nowrap transition-opacity duration-200
+                focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-400
+                ${isActive
+                  ? 'text-brand-800 after:absolute after:bottom-0 after:left-0 after:w-full after:h-[2px] after:bg-brand-400'
+                  : 'text-brand-800/40 hover:text-brand-800/70'
                 }
               `}
             >

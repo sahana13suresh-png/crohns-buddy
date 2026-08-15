@@ -1,17 +1,17 @@
 import { NextResponse } from 'next/server';
 import type { MealPlanRequest, MealPlanResponse } from '@/lib/types';
+import { invokeBedrockClaude } from '@/lib/bedrock';
 
 /**
  * POST /api/meal-plan
  *
  * Accepts structured quiz answers from the meal planner quiz,
- * builds a prompt, calls OpenAI GPT-4o-mini, and returns a
+ * builds a prompt, calls Anthropic Claude via AWS Bedrock, and returns a
  * structured meal plan response.
  */
 export async function POST(request: Request): Promise<NextResponse<MealPlanResponse>> {
   try {
-    const apiKey = process.env.OPENAI_API_KEY;
-    if (!apiKey) {
+    if (!process.env.AWS_BEARER_TOKEN_BEDROCK) {
       return NextResponse.json(
         { success: false, error: 'AI service is not configured. Please contact support.' },
         { status: 500 }
@@ -40,86 +40,31 @@ export async function POST(request: Request): Promise<NextResponse<MealPlanRespo
     const systemPrompt = buildSystemPrompt();
     const userContext = buildUserContext(body.quizAnswers);
 
-    // Call OpenAI API with 60-second timeout
-    const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 60000);
-
-    let openAIResponse: Response;
+    // Call Anthropic Claude via Bedrock
+    let content: string;
     try {
-      openAIResponse = await fetch('https://api.openai.com/v1/chat/completions', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${apiKey}`,
-        },
-        body: JSON.stringify({
-          model: 'gpt-4o-mini',
-          messages: [
-            { role: 'system', content: systemPrompt },
-            { role: 'user', content: userContext },
-          ],
-          temperature: 0.7,
-          max_tokens: 2000,
-        }),
-        signal: controller.signal,
+      content = await invokeBedrockClaude({
+        systemPrompt,
+        messages: [{ role: 'user', content: userContext }],
+        maxTokens: 8000,
+        temperature: 0.7,
       });
     } catch (error: unknown) {
-      clearTimeout(timeoutId);
-      if (error instanceof Error && error.name === 'AbortError') {
-        return NextResponse.json(
-          { success: false, error: 'The AI service is taking too long. Please try again.' },
-          { status: 504 }
-        );
-      }
-      return NextResponse.json(
-        { success: false, error: 'The AI service is temporarily unavailable. Please try again later.' },
-        { status: 502 }
-      );
-    }
-
-    clearTimeout(timeoutId);
-
-    // Handle OpenAI API error responses
-    if (!openAIResponse.ok) {
-      if (openAIResponse.status === 429) {
+      console.error('Bedrock API error:', error);
+      if (error instanceof Error && error.name === 'ThrottlingException') {
         return NextResponse.json(
           { success: false, error: 'The service is busy. Please wait a moment and try again.' },
           { status: 429 }
         );
       }
-      if (openAIResponse.status >= 500) {
-        return NextResponse.json(
-          { success: false, error: 'The AI service is temporarily unavailable. Please try again later.' },
-          { status: 502 }
-        );
-      }
       return NextResponse.json(
         { success: false, error: 'The AI service is temporarily unavailable. Please try again later.' },
         { status: 502 }
       );
     }
 
-    // Parse OpenAI response
-    let openAIData: unknown;
-    try {
-      openAIData = await openAIResponse.json();
-    } catch {
-      return NextResponse.json(
-        { success: false, error: 'We received an unexpected response. Please try again.' },
-        { status: 502 }
-      );
-    }
-
-    // Extract the AI-generated content
-    const content = extractContent(openAIData);
-    if (!content) {
-      return NextResponse.json(
-        { success: false, error: 'We received an unexpected response. Please try again.' },
-        { status: 502 }
-      );
-    }
-
     // Parse the meal plan from the AI response
+    console.log('[meal-plan] AI response length:', content.length, 'Preview:', content.slice(0, 100));
     const mealPlan = parseMealPlan(content);
     if (!mealPlan) {
       return NextResponse.json(
@@ -129,7 +74,8 @@ export async function POST(request: Request): Promise<NextResponse<MealPlanRespo
     }
 
     return NextResponse.json({ success: true, mealPlan });
-  } catch {
+  } catch (err) {
+    console.error('Meal plan route unexpected error:', err);
     return NextResponse.json(
       { success: false, error: 'An unexpected error occurred. Please try again.' },
       { status: 500 }
@@ -165,83 +111,78 @@ You MUST respond with ONLY a valid JSON object in the following format (no markd
   "warnings": ["Optional array of important dietary warnings or reminders"]
 }
 
-Each meal should have 2-4 food items. Include portion sizes for every item.
-The "warnings" array is optional but should be included if the patient has allergies, is in a flare, or has specific medical conditions.`;
+Each meal should have 2-4 food items. Include portion sizes for every item. Keep "notes" brief (under 10 words each).
+The "warnings" array is optional but should be included if the patient has allergies, is in a flare, or has specific medical conditions.
+IMPORTANT: Respond with ONLY the raw JSON. Do NOT wrap it in code fences or markdown.`;
 }
 
 /**
  * Builds the user context message from quiz answers, organized by section.
+ * Safely handles missing/undefined fields.
  */
 function buildUserContext(quizAnswers: MealPlanRequest['quizAnswers']): string {
-  const {
-    section1_crohnsStatus,
-    section2_medicalSafety,
-    section3_foodTolerance,
-    section4_foodPreferences,
-    section5_lifestyle,
-    section6_output,
-  } = quizAnswers;
+  const s1 = quizAnswers.section1_crohnsStatus || {};
+  const s2 = quizAnswers.section2_medicalSafety || {};
+  const s3 = quizAnswers.section3_foodTolerance || {};
+  const s4 = quizAnswers.section4_foodPreferences || {};
+  const s5 = quizAnswers.section5_lifestyle || {};
+  const s6 = quizAnswers.section6_output || {};
+
+  const arr = (val: unknown): string => {
+    if (Array.isArray(val) && val.length > 0) return val.join(', ');
+    return 'Not specified';
+  };
+
+  const str = (val: unknown, fallback = 'Not specified'): string => {
+    if (val && typeof val === 'string') return val;
+    if (typeof val === 'number') return String(val);
+    return fallback;
+  };
 
   return `Please generate a personalized meal plan based on the following patient information:
 
 ## Section 1: Current Crohn's Status
-- Flare Status: ${section1_crohnsStatus.flareStatus}
-- Current Symptoms: ${section1_crohnsStatus.currentSymptoms}
-- Symptom Checklist: ${section1_crohnsStatus.symptomChecklist.join(', ') || 'None selected'}
-- Doctor's Diet Instructions: ${section1_crohnsStatus.doctorDietInstructions}
+- Flare Status: ${str(s1.flareStatus)}
+- Current Symptoms: ${str(s1.currentSymptoms)}
+- Symptom Checklist: ${arr(s1.symptomChecklist)}
+- Doctor's Diet Instructions: ${str(s1.doctorDietInstructions)}
 
 ## Section 2: Medical Safety
-- History of Surgery/Obstruction: ${section2_medicalSafety.surgeryOrObstruction}
-- Recent Weight Loss: ${section2_medicalSafety.recentWeightLoss}
-- Food Allergies: ${section2_medicalSafety.foodAllergies.join(', ') || 'None'}
-- Foods to Avoid (Medical): ${section2_medicalSafety.foodsToAvoid.join(', ') || 'None'}
+- History of Surgery/Obstruction: ${str(s2.surgeryOrObstruction)}
+- Recent Weight Loss: ${str(s2.recentWeightLoss)}
+- Food Allergies: ${arr(s2.foodAllergies)}
+- Foods to Avoid (Medical): ${arr(s2.foodsToAvoid)}
 
 ## Section 3: Food Tolerance
-- Safe Foods: ${section3_foodTolerance.safeFoods.join(', ') || 'None listed'}
-- Trigger Foods: ${section3_foodTolerance.triggerFoods.join(', ') || 'None listed'}
-- Foods to Reintroduce: ${section3_foodTolerance.reintroduceFoods.join(', ') || 'None'}
-- Fiber Tolerance: ${section3_foodTolerance.fiberTolerance}
+- Safe Foods: ${arr(s3.safeFoods)}
+- Trigger Foods: ${arr(s3.triggerFoods)}
+- Foods to Reintroduce: ${arr(s3.reintroduceFoods)}
+- Fiber Tolerance: ${str(s3.fiberTolerance)}
 
 ## Section 4: Food Preferences
-- Preferred Meal Types: ${section4_foodPreferences.preferredMealTypes.join(', ') || 'No preference'}
-- Refused Foods: ${section4_foodPreferences.refusedFoods.join(', ') || 'None'}
-- Protein Preferences: ${section4_foodPreferences.proteinPreferences.join(', ') || 'No preference'}
-- Carb Preferences: ${section4_foodPreferences.carbPreferences.join(', ') || 'No preference'}
+- Preferred Meal Types: ${arr(s4.preferredMealTypes)}
+- Refused Foods: ${arr(s4.refusedFoods)}
+- Protein Preferences: ${arr(s4.proteinPreferences)}
+- Carb Preferences: ${arr(s4.carbPreferences)}
 
 ## Section 5: Lifestyle
-- Meal Plan Duration: ${section5_lifestyle.mealPlanDuration}
-- Available Cooking Time: ${section5_lifestyle.cookingTime}
-- Kitchen Appliances: ${section5_lifestyle.applianceAccess.join(', ') || 'Basic'}
-- Meals Per Day: ${section5_lifestyle.mealsPerDay}
+- Meal Plan Duration: ${str(s5.mealPlanDuration, 'Daily plan')}
+- Available Cooking Time: ${str(s5.cookingTime, 'Moderate')}
+- Kitchen Appliances: ${typeof s5.applianceAccess === 'string' ? s5.applianceAccess : arr(s5.applianceAccess)}
+- Meals Per Day: ${str(s5.mealsPerDay, '3')}
 
 ## Section 6: Output Preferences
-- Dietary Goals: ${section6_output.dietaryGoals.join(', ') || 'General health'}
-- Output Format: ${section6_output.outputFormat}
-- Adventurousness: ${section6_output.adventurousness}
-- Extra Notes: ${section6_output.extraNotes || 'None'}
+- Dietary Goals: ${arr(s6.dietaryGoals)}
+- Output Format: ${str(s6.outputFormat, 'Simple list of meals')}
+- Adventurousness: ${str(s6.adventurousness, 'Moderate')}
+- Extra Notes: ${str(s6.extraNotes, 'None')}
 
-Please generate a ${section5_lifestyle.mealPlanDuration} meal plan with ${section5_lifestyle.mealsPerDay} meals per day.`;
-}
-
-/**
- * Extracts the text content from an OpenAI API response.
- */
-function extractContent(data: unknown): string | null {
-  try {
-    const obj = data as Record<string, unknown>;
-    const choices = obj.choices as Array<Record<string, unknown>>;
-    if (!choices || choices.length === 0) return null;
-    const message = choices[0].message as Record<string, unknown>;
-    if (!message) return null;
-    return (message.content as string) || null;
-  } catch {
-    return null;
-  }
+Please generate a ${str(s5.mealPlanDuration, 'daily')} meal plan with ${str(s5.mealsPerDay, '3')} meals per day.`;
 }
 
 /**
  * Parses the AI-generated content into a structured meal plan.
- * Handles cases where the AI might wrap JSON in code fences.
+ * Handles cases where the AI might wrap JSON in code fences or add surrounding text.
  */
 function parseMealPlan(content: string): MealPlanResponse['mealPlan'] | null {
   try {
@@ -251,26 +192,36 @@ function parseMealPlan(content: string): MealPlanResponse['mealPlan'] | null {
       jsonStr = jsonStr.replace(/^```(?:json)?\s*\n?/, '').replace(/\n?```\s*$/, '');
     }
 
+    // Try to extract JSON object if there's surrounding text
+    const jsonMatch = jsonStr.match(/\{[\s\S]*\}/);
+    if (jsonMatch) {
+      jsonStr = jsonMatch[0];
+    }
+
     const parsed = JSON.parse(jsonStr);
 
     // Validate the structure
     if (!parsed.meals || !Array.isArray(parsed.meals) || parsed.meals.length === 0) {
+      console.error('[parseMealPlan] Invalid structure: missing meals array');
       return null;
     }
 
     // Validate each meal has the required fields
     for (const meal of parsed.meals) {
       if (!meal.mealName || !Array.isArray(meal.items) || meal.items.length === 0) {
+        console.error('[parseMealPlan] Invalid meal structure:', meal.mealName);
         return null;
       }
       for (const item of meal.items) {
         if (!item.name || !item.portion) {
+          console.error('[parseMealPlan] Invalid item in meal:', item);
           return null;
         }
       }
     }
 
     if (!parsed.summary || typeof parsed.summary !== 'string') {
+      console.error('[parseMealPlan] Missing or invalid summary');
       return null;
     }
 
@@ -286,7 +237,8 @@ function parseMealPlan(content: string): MealPlanResponse['mealPlan'] | null {
       summary: parsed.summary as string,
       ...(parsed.warnings && Array.isArray(parsed.warnings) ? { warnings: parsed.warnings } : {}),
     };
-  } catch {
+  } catch (err) {
+    console.error('[parseMealPlan] JSON parse error:', err, '\nContent preview:', content.slice(0, 200));
     return null;
   }
 }

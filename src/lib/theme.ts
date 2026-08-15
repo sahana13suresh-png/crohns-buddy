@@ -1,46 +1,32 @@
 /**
- * Crohn's Buddy Blue Color Palette
+ * Crohn's Buddy — Strict 3-Color Palette
  *
- * A consistent blue theme used across the entire application.
- * These constants are referenced by both Tailwind config and component styles.
+ * Background: light blue (#e8f4fc)
+ * Text: dark navy (#0f2240)
+ * Accent: mid blue (#5eb0e6)
  */
 
 export const colors = {
   blue: {
-    50: '#eff6ff',
-    100: '#dbeafe',
-    200: '#bfdbfe',
-    300: '#93c5fd',
-    400: '#60a5fa',
-    500: '#3b82f6',
-    600: '#2563eb',
-    700: '#1d4ed8',
-    800: '#1e40af',
-    900: '#1e3a8a',
-    950: '#172554',
+    50: '#dff2ff',   // Background — matches logo background
+    100: '#d0e4f7',
+    200: '#b4dcf5',
+    300: '#89c8ef',
+    400: '#5eb0e6',  // Accent
+    500: '#4a9dd4',
+    600: '#1b3a5c',
+    700: '#152d4a',
+    800: '#0f2240',  // Text
+    900: '#0a1a33',
+    950: '#061122',
   },
 } as const;
 
-/** Primary brand color used for headings, buttons, and active elements */
-export const primary = colors.blue[600];
-
-/** Light background tint for cards and hero sections */
+export const primary = colors.blue[800];
 export const primaryLight = colors.blue[50];
-
-/** Darker shade for hover states and emphasis */
 export const primaryDark = colors.blue[800];
-
-/** Link color */
-export const linkColor = colors.blue[600];
-
-/** Active tab / accent color */
-export const accent = colors.blue[500];
-
-/** Header background */
-export const headerBg = colors.blue[700];
-
-/** Navigation active tab background */
-export const navActiveBg = colors.blue[600];
-
-/** Navigation inactive tab text */
-export const navInactiveText = colors.blue[200];
+export const linkColor = colors.blue[400];
+export const accent = colors.blue[400];
+export const headerBg = colors.blue[50];
+export const navActiveBg = colors.blue[800];
+export const navInactiveText = colors.blue[600];

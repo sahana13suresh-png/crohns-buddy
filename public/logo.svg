@@ -1,26 +1,75 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 80" width="320" height="80">
-  <!-- Light blue background -->
-  <rect width="320" height="80" rx="12" fill="#eff6ff"/>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 300 300" width="300" height="300">
+  <!-- Background -->
+  <rect width="300" height="300" rx="16" fill="#dbeafe"/>
   
-  <!-- Heart decoration (left side) -->
-  <path d="M30 30 C30 24, 38 20, 42 26 C46 20, 54 24, 54 30 C54 40, 42 48, 42 48 C42 48, 30 40, 30 30 Z" 
-        fill="#3b82f6" opacity="0.8"/>
+  <!-- Large intestine / colon - matching the reference exactly -->
+  <!-- The colon is a U-shape: ascending on left, transverse on top, descending on right curving inward, sigmoid at bottom center -->
   
-  <!-- "Crohn's Buddy" text -->
-  <text x="160" y="46" text-anchor="middle" font-family="Inter, system-ui, sans-serif" 
-        font-size="24" font-weight="700" fill="#1d4ed8">
-    Crohn's Buddy
-  </text>
+  <!-- Main colon body fill -->
+  <path d="
+    M 95 55
+    C 75 55, 58 65, 55 85
+    C 52 105, 52 120, 52 140
+    C 52 160, 52 175, 55 190
+    C 58 205, 68 215, 85 218
+    C 100 220, 115 220, 135 220
+    C 155 220, 170 218, 185 212
+    C 200 206, 210 195, 215 180
+    C 220 165, 220 148, 218 132
+    C 216 116, 208 105, 195 100
+    C 182 95, 172 100, 165 110
+    C 158 120, 155 135, 155 150
+    C 155 165, 158 178, 160 188
+    C 162 198, 158 208, 152 215
+    C 146 225, 145 235, 148 245
+    C 150 252, 148 258, 145 262
+  " fill="#deb760" stroke="#1a1a1a" stroke-width="8" stroke-linecap="round" stroke-linejoin="round"/>
   
-  <!-- Sparkle decoration (right side, top) -->
-  <path d="M275 20 L277 26 L283 28 L277 30 L275 36 L273 30 L267 28 L273 26 Z" 
-        fill="#60a5fa"/>
+  <!-- Haustra bumps (the scalloped edges) - outer left side -->
+  <circle cx="48" cy="90" r="8" fill="#d4a94d" stroke="#1a1a1a" stroke-width="3"/>
+  <circle cx="45" cy="110" r="8" fill="#d4a94d" stroke="#1a1a1a" stroke-width="3"/>
+  <circle cx="44" cy="130" r="8" fill="#d4a94d" stroke="#1a1a1a" stroke-width="3"/>
+  <circle cx="45" cy="150" r="8" fill="#d4a94d" stroke="#1a1a1a" stroke-width="3"/>
+  <circle cx="46" cy="170" r="8" fill="#d4a94d" stroke="#1a1a1a" stroke-width="3"/>
+  <circle cx="50" cy="190" r="7" fill="#d4a94d" stroke="#1a1a1a" stroke-width="3"/>
   
-  <!-- Sparkle decoration (right side, bottom) -->
-  <path d="M290 40 L291.5 44 L295.5 45.5 L291.5 47 L290 51 L288.5 47 L284.5 45.5 L288.5 44 Z" 
-        fill="#93c5fd"/>
+  <!-- Haustra bumps - top transverse -->
+  <circle cx="80" cy="50" r="8" fill="#d4a94d" stroke="#1a1a1a" stroke-width="3"/>
+  <circle cx="100" cy="46" r="8" fill="#d4a94d" stroke="#1a1a1a" stroke-width="3"/>
+  <circle cx="120" cy="44" r="8" fill="#d4a94d" stroke="#1a1a1a" stroke-width="3"/>
+  <circle cx="140" cy="44" r="8" fill="#d4a94d" stroke="#1a1a1a" stroke-width="3"/>
+  <circle cx="160" cy="46" r="8" fill="#d4a94d" stroke="#1a1a1a" stroke-width="3"/>
+  <circle cx="180" cy="50" r="8" fill="#d4a94d" stroke="#1a1a1a" stroke-width="3"/>
+  <circle cx="198" cy="58" r="7" fill="#d4a94d" stroke="#1a1a1a" stroke-width="3"/>
   
-  <!-- Small sparkle (left of main text) -->
-  <path d="M62 22 L63 25 L66 26 L63 27 L62 30 L61 27 L58 26 L61 25 Z" 
-        fill="#60a5fa" opacity="0.7"/>
+  <!-- Haustra bumps - right descending (outer) -->
+  <circle cx="222" cy="115" r="7" fill="#d4a94d" stroke="#1a1a1a" stroke-width="3"/>
+  <circle cx="225" cy="135" r="7" fill="#d4a94d" stroke="#1a1a1a" stroke-width="3"/>
+  <circle cx="224" cy="155" r="7" fill="#d4a94d" stroke="#1a1a1a" stroke-width="3"/>
+  <circle cx="220" cy="175" r="7" fill="#d4a94d" stroke="#1a1a1a" stroke-width="3"/>
+  <circle cx="212" cy="192" r="7" fill="#d4a94d" stroke="#1a1a1a" stroke-width="3"/>
+  
+  <!-- Haustra bumps - bottom -->
+  <circle cx="195" cy="215" r="7" fill="#d4a94d" stroke="#1a1a1a" stroke-width="3"/>
+  <circle cx="175" cy="222" r="7" fill="#d4a94d" stroke="#1a1a1a" stroke-width="3"/>
+  <circle cx="155" cy="225" r="7" fill="#d4a94d" stroke="#1a1a1a" stroke-width="3"/>
+  <circle cx="135" cy="225" r="7" fill="#d4a94d" stroke="#1a1a1a" stroke-width="3"/>
+  <circle cx="115" cy="223" r="7" fill="#d4a94d" stroke="#1a1a1a" stroke-width="3"/>
+  <circle cx="95" cy="218" r="7" fill="#d4a94d" stroke="#1a1a1a" stroke-width="3"/>
+  
+  <!-- Haustra bumps - inner right curve -->
+  <circle cx="162" cy="115" r="6" fill="#d4a94d" stroke="#1a1a1a" stroke-width="2.5"/>
+  <circle cx="158" cy="135" r="6" fill="#d4a94d" stroke="#1a1a1a" stroke-width="2.5"/>
+  <circle cx="157" cy="155" r="6" fill="#d4a94d" stroke="#1a1a1a" stroke-width="2.5"/>
+  <circle cx="160" cy="175" r="6" fill="#d4a94d" stroke="#1a1a1a" stroke-width="2.5"/>
+  
+  <!-- Sigmoid / rectum at bottom -->
+  <ellipse cx="148" cy="248" rx="8" ry="12" fill="#deb760" stroke="#1a1a1a" stroke-width="4"/>
+  <path d="M 148 260 L 148 268 L 146 272" fill="none" stroke="#1a1a1a" stroke-width="3" stroke-linecap="round"/>
+  
+  <!-- Small intestine / ileum (thin tube going to bottom left) -->
+  <path d="M 65 205 C 58 210, 52 218, 48 228 C 44 238, 42 245, 44 250" 
+        fill="none" stroke="#1a1a1a" stroke-width="4" stroke-linecap="round"/>
+  <path d="M 65 205 C 58 210, 52 218, 48 228 C 44 238, 42 245, 44 250" 
+        fill="none" stroke="#deb760" stroke-width="2" stroke-linecap="round" opacity="0.5"/>
 </svg>

@@ -62,12 +62,12 @@ export interface Section6Answers {
 
 export interface MealPlanRequest {
   quizAnswers: {
-    section1_crohnsStatus: Section1Answers;
-    section2_medicalSafety: Section2Answers;
-    section3_foodTolerance: Section3Answers;
-    section4_foodPreferences: Section4Answers;
-    section5_lifestyle: Section5Answers;
-    section6_output: Section6Answers;
+    section1_crohnsStatus?: Partial<Section1Answers>;
+    section2_medicalSafety?: Partial<Section2Answers>;
+    section3_foodTolerance?: Partial<Section3Answers>;
+    section4_foodPreferences?: Partial<Section4Answers>;
+    section5_lifestyle?: Partial<Section5Answers>;
+    section6_output?: Partial<Section6Answers>;
   };
 }
 

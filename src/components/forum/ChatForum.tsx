@@ -1,26 +1,30 @@
 'use client';
 
 import React, { useState, useEffect, useRef } from 'react';
+import { User } from 'firebase/auth';
 import { ForumMessage, ModerateResponse } from '@/lib/types';
-import { subscribeToForumMessages, postForumMessage } from '@/lib/firebase';
+import {
+  subscribeToForumMessages,
+  postForumMessage,
+  signInWithGoogle,
+  signOut,
+  onAuthChange,
+} from '@/lib/firebase';
 import ChatMessage from './ChatMessage';
 
-const DISPLAY_NAME_MIN = 1;
-const DISPLAY_NAME_MAX = 50;
 const MESSAGE_MIN = 1;
 const MESSAGE_MAX = 2000;
-const SESSION_STORAGE_KEY = 'crohns-buddy-forum-displayName';
 
 /**
  * ChatForum is the community chat component that renders on the Resources page.
- * It allows users to browse messages without a display name, but requires one to post.
+ * Users can browse messages without signing in, but must sign in with Google to post.
  * Messages are loaded in real-time from Firestore in reverse chronological order.
  */
 export default function ChatForum() {
-  // Display name state
-  const [displayName, setDisplayName] = useState('');
-  const [displayNameInput, setDisplayNameInput] = useState('');
-  const [displayNameError, setDisplayNameError] = useState('');
+  // Auth state
+  const [user, setUser] = useState<User | null>(null);
+  const [authLoading, setAuthLoading] = useState(true);
+  const [signInError, setSignInError] = useState('');
 
   // Message input state
   const [messageInput, setMessageInput] = useState('');
@@ -35,16 +39,13 @@ export default function ChatForum() {
   // Ref for scrolling
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
-  // Restore display name from sessionStorage on mount
+  // Listen for auth state changes
   useEffect(() => {
-    try {
-      const stored = sessionStorage.getItem(SESSION_STORAGE_KEY);
-      if (stored && stored.length >= DISPLAY_NAME_MIN && stored.length <= DISPLAY_NAME_MAX) {
-        setDisplayName(stored);
-      }
-    } catch {
-      // sessionStorage unavailable, no-op
-    }
+    const unsubscribe = onAuthChange((currentUser) => {
+      setUser(currentUser);
+      setAuthLoading(false);
+    });
+    return unsubscribe;
   }, []);
 
   // Subscribe to real-time Firestore messages
@@ -57,7 +58,7 @@ export default function ChatForum() {
         setIsLoading(false);
         setConnectionError('');
       });
-    } catch (error) {
+    } catch {
       setConnectionError('Unable to connect to the community chat. Please check your connection.');
       setIsLoading(false);
     }
@@ -69,25 +70,18 @@ export default function ChatForum() {
     };
   }, []);
 
-  // ─── Display Name Handlers ─────────────────────────────────────────────────
+  // ─── Auth Handlers ─────────────────────────────────────────────────────────
 
-  function handleDisplayNameSubmit(e: React.FormEvent) {
-    e.preventDefault();
-    const trimmed = displayNameInput.trim();
-
-    if (trimmed.length < DISPLAY_NAME_MIN || trimmed.length > DISPLAY_NAME_MAX) {
-      setDisplayNameError(`Display name must be between ${DISPLAY_NAME_MIN} and ${DISPLAY_NAME_MAX} characters.`);
-      return;
+  async function handleGoogleSignIn() {
+    setSignInError('');
+    const result = await signInWithGoogle();
+    if (!result) {
+      setSignInError('Sign-in failed. Please try again.');
     }
+  }
 
-    setDisplayName(trimmed);
-    setDisplayNameError('');
-
-    try {
-      sessionStorage.setItem(SESSION_STORAGE_KEY, trimmed);
-    } catch {
-      // sessionStorage unavailable, no-op
-    }
+  async function handleSignOut() {
+    await signOut();
   }
 
   // ─── Message Handlers ──────────────────────────────────────────────────────
@@ -104,6 +98,7 @@ export default function ChatForum() {
 
   async function handleMessageSubmit(e: React.FormEvent) {
     e.preventDefault();
+    if (!user) return;
 
     const validationError = validateMessage(messageInput);
     if (validationError) {
@@ -113,6 +108,8 @@ export default function ChatForum() {
 
     setMessageError('');
     setIsSending(true);
+
+    const displayName = user.displayName || user.email || 'Anonymous';
 
     try {
       // Step 1: Call moderation API
@@ -170,47 +167,67 @@ export default function ChatForum() {
         <div ref={messagesEndRef} />
       </div>
 
-      {/* Display Name Prompt (shown if no display name set) */}
-      {!displayName && (
-        <form onSubmit={handleDisplayNameSubmit} className="space-y-3">
-          <label htmlFor="display-name-input" className="block text-sm font-medium text-gray-700">
-            Enter a display name to join the conversation
-          </label>
-          <div className="flex gap-2">
-            <input
-              id="display-name-input"
-              type="text"
-              value={displayNameInput}
-              onChange={(e) => {
-                setDisplayNameInput(e.target.value);
-                setDisplayNameError('');
-              }}
-              placeholder="Your display name (1-50 characters)"
-              maxLength={DISPLAY_NAME_MAX}
-              className="flex-1 rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-brand-500"
-              aria-describedby={displayNameError ? 'display-name-error' : undefined}
-            />
-            <button
-              type="submit"
-              className="px-4 py-2 rounded-lg bg-brand-600 text-white text-sm font-medium hover:bg-brand-700 focus:outline-none focus:ring-2 focus:ring-brand-500 transition-colors"
-            >
-              Join
-            </button>
-          </div>
-          {displayNameError && (
-            <p id="display-name-error" className="text-sm text-red-600" role="alert">
-              {displayNameError}
-            </p>
+      {/* Sign In Section (shown if not authenticated) */}
+      {!authLoading && !user && (
+        <div className="space-y-3 border-t border-gray-200 pt-4">
+          <p className="text-sm text-gray-600">
+            Sign in to join the conversation
+          </p>
+          <button
+            onClick={handleGoogleSignIn}
+            className="flex items-center gap-3 px-4 py-2.5 rounded-lg border border-gray-300 bg-white text-sm font-medium text-gray-700 hover:bg-gray-50 hover:border-gray-400 focus:outline-none focus:ring-2 focus:ring-brand-500 transition-colors shadow-sm"
+          >
+            <svg className="w-5 h-5" viewBox="0 0 24 24" aria-hidden="true">
+              <path
+                d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"
+                fill="#4285F4"
+              />
+              <path
+                d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"
+                fill="#34A853"
+              />
+              <path
+                d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"
+                fill="#FBBC05"
+              />
+              <path
+                d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"
+                fill="#EA4335"
+              />
+            </svg>
+            Sign in with Google
+          </button>
+          {signInError && (
+            <p className="text-sm text-red-600" role="alert">{signInError}</p>
           )}
-        </form>
+        </div>
       )}
 
-      {/* Message Input (shown only if display name is set) */}
-      {displayName && (
-        <form onSubmit={handleMessageSubmit} className="space-y-3">
-          <div className="flex items-center gap-2 text-sm text-gray-600">
-            <span>Posting as</span>
-            <span className="font-semibold text-brand-700">{displayName}</span>
+      {/* Message Input (shown only if signed in) */}
+      {user && (
+        <form onSubmit={handleMessageSubmit} className="space-y-3 border-t border-gray-200 pt-4">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2 text-sm text-gray-600">
+              {user.photoURL && (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img
+                  src={user.photoURL}
+                  alt=""
+                  className="w-6 h-6 rounded-full"
+                />
+              )}
+              <span>Posting as</span>
+              <span className="font-semibold text-brand-700">
+                {user.displayName || user.email}
+              </span>
+            </div>
+            <button
+              type="button"
+              onClick={handleSignOut}
+              className="text-xs text-gray-500 hover:text-gray-700 underline"
+            >
+              Sign out
+            </button>
           </div>
           <div className="flex gap-2">
             <input
