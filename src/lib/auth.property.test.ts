@@ -922,10 +922,9 @@ describe('session validity as a function of age', () => {
  *   `NEXT_PUBLIC_AUTH_PROVIDERS` becomes a list of Identity_Providers, so the
  *   "exactly one per recognized configured provider, none for an unrecognized or
  *   absent one" clause is checked against that function directly.
- * - **The rendering.** The Auth_UI deliberately renders no password field:
- *   credentials are collected only by Cognito managed login. The second half
- *   renders the real `AuthModal` on both views and checks the managed-login
- *   controls against the deployment configuration.
+ * - **The rendering.** The Auth_UI renders the branded native account form and
+ *   the second half renders the real `AuthModal` on both views, checking the
+ *   provider controls against the deployment configuration.
  *
  * The expected provider list is never obtained by re-running the parse. Each
  * comma segment is generated together with the provider it names, so the
@@ -1159,7 +1158,7 @@ describe('Identity_Provider controls mirror the Deployment_Configuration', () =>
     );
   });
 
-  it('renders one control per configured provider on both views without collecting credentials', async () => {
+  it('renders one control per configured provider alongside the native account form', async () => {
     const { createElement } = property23Modules.react;
     const { cleanup, render, screen } = property23Modules.rtl;
     const AuthModal = property23Modules.authModal.default;
@@ -1215,18 +1214,22 @@ describe('Identity_Provider controls mirror the Deployment_Configuration', () =>
                 ).toHaveLength(0);
               }
 
-              // Passwords never enter the application UI. The primary control
-              // sends the visitor to Cognito's managed authorization flow.
-              expect(screen.queryByLabelText(/password/i)).toBeNull();
-              const primaryLabel =
-                mode === 'signup' ? 'Continue to create account' : 'Continue with email';
-              expect(screen.getByRole('link', { name: primaryLabel })).toHaveAttribute(
-                'href',
-                `/api/auth/start?intent=${mode === 'signup' ? 'signup' : 'signin'}&returnTo=%2F`,
+              // The branded form remains available regardless of social-provider
+              // configuration and uses browser password-manager semantics.
+              expect(screen.getByLabelText('Email')).toHaveAttribute(
+                'autocomplete',
+                'email',
+              );
+              expect(screen.getByLabelText('Password')).toHaveAttribute(
+                'autocomplete',
+                mode === 'signup' ? 'new-password' : 'current-password',
               );
               expect(
-                screen.getByText(/never receives or stores it/i),
-              ).toBeInTheDocument();
+                screen.getByRole('button', {
+                  name: mode === 'signup' ? 'Create account' : 'Log in',
+                }),
+              ).toBeEnabled();
+              expect(screen.queryByText(/cognito|amazon cognito/i)).toBeNull();
             } finally {
               cleanup();
               vi.unstubAllEnvs();

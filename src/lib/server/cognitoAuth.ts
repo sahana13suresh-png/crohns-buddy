@@ -22,6 +22,7 @@ export const AUTH_COOKIE_NAMES = {
   idToken: '__Host-cb-id-token',
   accessToken: '__Host-cb-access-token',
   refreshToken: '__Host-cb-refresh-token',
+  passwordChallenge: '__Host-cb-password-challenge',
   oauthState: '__Host-cb-oauth-state',
   oauthVerifier: '__Host-cb-oauth-verifier',
   oauthReturnTo: '__Host-cb-oauth-return-to',
@@ -521,6 +522,18 @@ export function requestOrigin(req: Request): string {
     );
   }
   return allowed;
+}
+
+export function assertSameOriginRequest(req: Request): string {
+  const origin = requestOrigin(req);
+  const suppliedOrigin = req.headers.get('origin');
+  if (suppliedOrigin && normalizeOrigin(suppliedOrigin) !== origin) {
+    throw new Error('The request origin is not allowed for authentication.');
+  }
+  if (req.headers.get('sec-fetch-site')?.toLowerCase() === 'cross-site') {
+    throw new Error('Cross-site authentication requests are not allowed.');
+  }
+  return origin;
 }
 
 export function safeReturnTo(value: string | null): string {

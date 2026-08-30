@@ -1,10 +1,10 @@
 /**
  * Browser authentication facade.
  *
- * Credentials are entered only on Amazon Cognito managed-login pages. This
- * module never receives or stores a password. Cognito returns an authorization
- * code to a server route, which exchanges it with PKCE and keeps the resulting
- * tokens in Secure, HttpOnly cookies.
+ * Passwords are submitted over HTTPS for a single account operation, are never
+ * persisted by the application, and are never included in browser storage.
+ * Session tokens remain inaccessible to browser JavaScript in Secure, HttpOnly
+ * cookies.
  */
 
 import {
@@ -41,8 +41,24 @@ export type AuthErrorKind =
   | 'popup-blocked'
   | 'account-exists-with-different-credential'
   | 'requires-recent-login'
+  | 'invalid-code'
+  | 'expired-code'
+  | 'unverified-email'
+  | 'password-reset-required'
   | 'not-configured'
   | 'unknown';
+
+export type PasswordAuthStep =
+  | 'done'
+  | 'confirm-signup'
+  | 'sign-in'
+  | 'mfa'
+  | 'reset-password';
+
+export interface PasswordAuthResult {
+  step: PasswordAuthStep;
+  method?: 'authenticator' | 'sms';
+}
 
 export class AuthOperationError extends Error {
   constructor(readonly code: string, message: string) {
@@ -108,6 +124,14 @@ export function classifyAuthError(error: unknown): AuthErrorKind {
       return 'unavailable';
     case 'auth/requires-recent-login':
       return 'requires-recent-login';
+    case 'auth/invalid-code':
+      return 'invalid-code';
+    case 'auth/expired-code':
+      return 'expired-code';
+    case 'auth/unverified-email':
+      return 'unverified-email';
+    case 'auth/password-reset-required':
+      return 'password-reset-required';
     case 'auth/popup-closed-by-user':
     case 'auth/cancelled-popup-request':
     case 'auth/user-cancelled':
@@ -308,34 +332,146 @@ function navigate(url: string): void {
   if (typeof window !== 'undefined') window.location.assign(url);
 }
 
-export async function signUp(
-  _email?: string,
-  _password?: string,
-  _displayName?: string,
-): Promise<never> {
-  if (!isCognitoConfigured()) {
-    throw new AuthOperationError('auth/not-configured', 'Cognito is not configured.');
+function accountErrorCode(value: unknown): string {
+  switch (value) {
+    case 'email-in-use':
+      return 'auth/email-already-in-use';
+    case 'weak-password':
+      return 'auth/weak-password';
+    case 'invalid-credentials':
+      return 'auth/invalid-credential';
+    case 'too-many-requests':
+      return 'auth/too-many-requests';
+    case 'invalid-code':
+      return 'auth/invalid-code';
+    case 'expired-code':
+      return 'auth/expired-code';
+    case 'unverified-email':
+      return 'auth/unverified-email';
+    case 'password-reset-required':
+      return 'auth/password-reset-required';
+    case 'invalid-input':
+      return 'auth/invalid-email';
+    case 'unavailable':
+      return 'auth/unavailable';
+    default:
+      return 'auth/unknown';
   }
-  navigate(authStartUrl({ intent: 'signup' }));
-  return new Promise<never>(() => undefined);
 }
 
-export async function signIn(email = '', _password = ''): Promise<never> {
+async function passwordAuthRequest(
+  body: Record<string, unknown>,
+): Promise<PasswordAuthResult> {
+  if (!isCognitoConfigured()) {
+    throw new AuthOperationError(
+      'auth/not-configured',
+      'Account features are not configured.',
+    );
+  }
+  let response: Response;
+  try {
+    response = await fetch('/api/auth/password', {
+      method: 'POST',
+      credentials: 'same-origin',
+      cache: 'no-store',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body),
+    });
+  } catch {
+    throw new AuthOperationError('auth/unavailable', 'Account service unavailable.');
+  }
+  const value: unknown = await response.json().catch(() => null);
+  if (!response.ok) {
+    const code =
+      value !== null &&
+      typeof value === 'object' &&
+      typeof (value as { code?: unknown }).code === 'string'
+        ? (value as { code: string }).code
+        : 'unavailable';
+    throw new AuthOperationError(accountErrorCode(code), 'Account request failed.');
+  }
+  if (
+    value === null ||
+    typeof value !== 'object' ||
+    typeof (value as { step?: unknown }).step !== 'string'
+  ) {
+    throw new AuthOperationError('auth/unavailable', 'Account request failed.');
+  }
+  return value as PasswordAuthResult;
+}
+
+export async function signUp(
+  email = '',
+  password = '',
+  displayName = '',
+): Promise<PasswordAuthResult> {
+  return passwordAuthRequest({
+    action: 'signup',
+    email,
+    password,
+    displayName,
+  });
+}
+
+export async function confirmSignUp(
+  email: string,
+  code: string,
+): Promise<PasswordAuthResult> {
+  return passwordAuthRequest({ action: 'confirm-signup', email, code });
+}
+
+export async function resendSignUpCode(email: string): Promise<PasswordAuthResult> {
+  return passwordAuthRequest({ action: 'resend-signup', email });
+}
+
+export async function signIn(
+  email = '',
+  password = '',
+): Promise<PasswordAuthResult> {
   const throttle = await getSignInThrottleState(email);
   if (!throttle.allowed) throw new SignInThrottledError(throttle.retryAfterSeconds);
-  if (!isCognitoConfigured()) {
-    throw new AuthOperationError('auth/not-configured', 'Cognito is not configured.');
+  try {
+    const result = await passwordAuthRequest({
+      action: 'signin',
+      email,
+      password,
+    });
+    if (result.step === 'done') {
+      await resetSignInFailures(email);
+      emitSessionChanged();
+    }
+    return result;
+  } catch (error: unknown) {
+    if (classifyAuthError(error) === 'invalid-credentials') {
+      await recordSignInFailure(email);
+    }
+    throw error;
   }
-  navigate(authStartUrl({ intent: 'signin' }));
-  return new Promise<never>(() => undefined);
 }
 
-export async function requestPasswordReset(_email?: string): Promise<never> {
-  if (!isCognitoConfigured()) {
-    throw new AuthOperationError('auth/not-configured', 'Cognito is not configured.');
-  }
-  navigate(authStartUrl({ intent: 'signin', prompt: 'login' }));
-  return new Promise<never>(() => undefined);
+export async function confirmSignInMfa(code: string): Promise<PasswordAuthResult> {
+  const result = await passwordAuthRequest({ action: 'mfa', code });
+  if (result.step === 'done') emitSessionChanged();
+  return result;
+}
+
+export async function requestPasswordReset(
+  email = '',
+): Promise<PasswordAuthResult> {
+  return passwordAuthRequest({ action: 'forgot-password', email });
+}
+
+export async function confirmPasswordReset(
+  email: string,
+  code: string,
+  password: string,
+): Promise<PasswordAuthResult> {
+  return passwordAuthRequest({
+    action: 'reset-password',
+    email,
+    code,
+    password,
+  });
 }
 
 export async function sendVerificationEmail(): Promise<void> {
@@ -353,7 +489,10 @@ export async function sendVerificationEmail(): Promise<void> {
 
 export async function reauthenticate(_password?: string): Promise<never> {
   if (!isCognitoConfigured()) {
-    throw new AuthOperationError('auth/not-configured', 'Cognito is not configured.');
+    throw new AuthOperationError(
+      'auth/not-configured',
+      'Account features are not configured.',
+    );
   }
   const returnTo =
     typeof window === 'undefined'

@@ -1,20 +1,23 @@
-import { render, screen } from '@testing-library/react';
+import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-import AuthModal, {
-  MANAGED_ACCOUNT_MESSAGE,
-  PASSWORD_PRIVACY_MESSAGE,
-  type AuthModalProps,
-} from './AuthModal';
+import AuthModal, { type AuthModalProps } from './AuthModal';
 
-const { signInWithGoogle } = vi.hoisted(() => ({
+const authMocks = vi.hoisted(() => ({
+  signIn: vi.fn(),
+  signUp: vi.fn(),
+  confirmSignUp: vi.fn(),
+  resendSignUpCode: vi.fn(),
+  requestPasswordReset: vi.fn(),
+  confirmPasswordReset: vi.fn(),
+  confirmSignInMfa: vi.fn(),
   signInWithGoogle: vi.fn(async () => ({ status: 'cancelled' as const })),
 }));
 
 vi.mock('@/lib/auth', async (importOriginal) => {
   const actual = await importOriginal<typeof import('@/lib/auth')>();
-  return { ...actual, signInWithGoogle };
+  return { ...actual, ...authMocks };
 });
 
 function renderModal(overrides: Partial<AuthModalProps> = {}) {
@@ -31,28 +34,119 @@ function renderModal(overrides: Partial<AuthModalProps> = {}) {
 beforeEach(() => {
   vi.clearAllMocks();
   vi.stubEnv('NEXT_PUBLIC_AUTH_PROVIDERS', 'google');
+  authMocks.signIn.mockResolvedValue({ step: 'done' });
+  authMocks.signUp.mockResolvedValue({ step: 'confirm-signup' });
+  authMocks.confirmSignUp.mockResolvedValue({ step: 'sign-in' });
+  authMocks.resendSignUpCode.mockResolvedValue({ step: 'confirm-signup' });
+  authMocks.requestPasswordReset.mockResolvedValue({ step: 'reset-password' });
+  authMocks.confirmPasswordReset.mockResolvedValue({ step: 'sign-in' });
+  authMocks.confirmSignInMfa.mockResolvedValue({ step: 'done' });
 });
 
-describe('Cognito account modal', () => {
-  it('sends email sign-in to the server-side authorization-code flow', () => {
+describe('account modal', () => {
+  it('renders the branded email login form without infrastructure terminology', () => {
     renderModal();
 
-    const link = screen.getByRole('link', { name: 'Continue with email' });
-    expect(link).toHaveAttribute(
-      'href',
-      '/api/auth/start?intent=signin&returnTo=%2F',
+    expect(
+      screen.getByRole('heading', { name: 'Log in with email' }),
+    ).toBeVisible();
+    expect(screen.getByLabelText('Email')).toHaveAttribute(
+      'autocomplete',
+      'email',
+    );
+    expect(screen.getByLabelText('Password')).toHaveAttribute(
+      'autocomplete',
+      'current-password',
+    );
+    expect(screen.getByRole('button', { name: 'Log in' })).toBeEnabled();
+    expect(screen.queryByText(/cognito|amazon/i)).not.toBeInTheDocument();
+  });
+
+  it('submits email credentials and closes after successful login', async () => {
+    const user = userEvent.setup();
+    const { props } = renderModal();
+
+    await user.type(screen.getByLabelText('Email'), 'patient@example.com');
+    await user.type(screen.getByLabelText('Password'), 'Strong!Password1');
+    await user.click(screen.getByRole('button', { name: 'Log in' }));
+
+    await waitFor(() =>
+      expect(authMocks.signIn).toHaveBeenCalledWith(
+        'patient@example.com',
+        'Strong!Password1',
+      ),
+    );
+    expect(props.onSuccess).toHaveBeenCalledTimes(1);
+  });
+
+  it('creates an account and advances to email verification', async () => {
+    const user = userEvent.setup();
+    renderModal({ mode: 'signup' });
+
+    await user.type(screen.getByLabelText('Display name'), 'Avery');
+    await user.type(screen.getByLabelText('Email'), 'avery@example.com');
+    await user.type(screen.getByLabelText('Password'), 'Strong!Password1');
+    await user.type(
+      screen.getByLabelText('Confirm password'),
+      'Strong!Password1',
+    );
+    await user.click(screen.getByRole('button', { name: 'Create account' }));
+
+    await waitFor(() =>
+      expect(authMocks.signUp).toHaveBeenCalledWith(
+        'avery@example.com',
+        'Strong!Password1',
+        'Avery',
+      ),
+    );
+    expect(
+      screen.getByRole('heading', { name: 'Verify your email' }),
+    ).toBeVisible();
+    expect(screen.getByLabelText('Verification code')).toHaveAttribute(
+      'autocomplete',
+      'one-time-code',
     );
   });
 
-  it('opens the account-creation flow without collecting a password', () => {
+  it('does not submit mismatched signup passwords', async () => {
+    const user = userEvent.setup();
     renderModal({ mode: 'signup' });
 
-    expect(screen.queryByLabelText(/password/i)).not.toBeInTheDocument();
+    await user.type(screen.getByLabelText('Display name'), 'Avery');
+    await user.type(screen.getByLabelText('Email'), 'avery@example.com');
+    await user.type(screen.getByLabelText('Password'), 'Strong!Password1');
+    await user.type(
+      screen.getByLabelText('Confirm password'),
+      'Different!Password2',
+    );
+    await user.click(screen.getByRole('button', { name: 'Create account' }));
+
+    expect(screen.getByRole('alert')).toHaveTextContent(
+      'Passwords do not match.',
+    );
+    expect(authMocks.signUp).not.toHaveBeenCalled();
+  });
+
+  it('provides an inline password recovery flow', async () => {
+    const user = userEvent.setup();
+    renderModal();
+
+    await user.click(screen.getByRole('button', { name: 'Forgot password?' }));
     expect(
-      screen.getByRole('link', { name: 'Continue to create account' }),
-    ).toHaveAttribute('href', '/api/auth/start?intent=signup&returnTo=%2F');
-    expect(screen.getByText(PASSWORD_PRIVACY_MESSAGE)).toBeVisible();
-    expect(screen.getByText(MANAGED_ACCOUNT_MESSAGE)).toBeVisible();
+      screen.getByRole('heading', { name: 'Reset your password' }),
+    ).toBeVisible();
+
+    await user.type(screen.getByLabelText('Email'), 'patient@example.com');
+    await user.click(screen.getByRole('button', { name: 'Send reset code' }));
+
+    await waitFor(() =>
+      expect(authMocks.requestPasswordReset).toHaveBeenCalledWith(
+        'patient@example.com',
+      ),
+    );
+    expect(
+      screen.getByRole('heading', { name: 'Choose a new password' }),
+    ).toBeVisible();
   });
 
   it('offers the configured Google provider and keeps it keyboard-operable', async () => {
@@ -63,18 +157,10 @@ describe('Cognito account modal', () => {
     google.focus();
     await user.keyboard('{Enter}');
 
-    expect(signInWithGoogle).toHaveBeenCalledTimes(1);
+    expect(authMocks.signInWithGoogle).toHaveBeenCalledTimes(1);
   });
 
-  it('switches between sign-in and account creation', async () => {
-    const user = userEvent.setup();
-    const { props } = renderModal();
-
-    await user.click(screen.getByRole('button', { name: 'Create an account' }));
-    expect(props.onSwitchMode).toHaveBeenCalledTimes(1);
-  });
-
-  it('closes with an explicit control and keeps the Privacy Notice available', async () => {
+  it('switches modes, closes with Escape, and links to the privacy notice', async () => {
     const user = userEvent.setup();
     const { props } = renderModal();
 
@@ -82,7 +168,12 @@ describe('Cognito account modal', () => {
       'href',
       '/privacy',
     );
-    await user.click(screen.getByRole('button', { name: 'Close' }));
+    await user.click(
+      screen.getByRole('button', { name: 'Create a new account' }),
+    );
+    expect(props.onSwitchMode).toHaveBeenCalledTimes(1);
+
+    await user.keyboard('{Escape}');
     expect(props.onClose).toHaveBeenCalledTimes(1);
   });
 });

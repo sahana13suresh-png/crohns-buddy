@@ -21,7 +21,7 @@ test('core navigation exposes saved plans and account settings', async ({ page }
   await expect(page.getByRole('link', { name: 'Privacy Notice' })).toBeVisible();
 });
 
-test('account modal keeps credentials on Cognito and exposes secure signup controls', async ({ page }) => {
+test('account modal provides a branded signup and recovery experience', async ({ page }) => {
   await page.goto('/');
 
   const signUp = page.getByRole('button', { name: 'Sign Up' });
@@ -41,18 +41,26 @@ test('account modal keeps credentials on Cognito and exposes secure signup contr
   await signUp.click();
   await expect(page.getByRole('dialog')).toBeVisible();
   await expect(page.getByRole('link', { name: 'Privacy Notice' })).toBeVisible();
-  await expect(page.getByLabel(/password/i)).toHaveCount(0);
-  await expect(
-    page.getByText(/Crohn's Buddy never receives or stores it/i)
-  ).toBeVisible();
-  await expect(
-    page.getByRole('link', { name: 'Continue to create account' })
-  ).toHaveAttribute('href', '/api/auth/start?intent=signup&returnTo=%2F');
+  await expect(page.getByRole('heading', { name: 'Create your account' })).toBeVisible();
+  await expect(page.getByLabel('Display name')).toBeVisible();
+  await expect(page.getByLabel('Email')).toHaveAttribute('autocomplete', 'email');
+  await expect(page.getByLabel('Password', { exact: true })).toHaveAttribute(
+    'autocomplete',
+    'new-password'
+  );
+  await expect(page.getByLabel('Confirm password')).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Create account' })).toBeEnabled();
+  await expect(page.getByRole('dialog').getByText(/cognito|amazon cognito/i)).toHaveCount(0);
 
   const google = page.getByRole('button', { name: 'Sign up with Google' });
   if ((await google.count()) > 0) {
     await expect(google).toBeEnabled();
   }
+
+  await page.getByRole('button', { name: 'Already have an account?' }).click();
+  await expect(page.getByRole('heading', { name: 'Log in with email' })).toBeVisible();
+  await page.getByRole('button', { name: 'Forgot password?' }).click();
+  await expect(page.getByRole('heading', { name: 'Reset your password' })).toBeVisible();
 });
 
 test('tab navigation supports keyboard focus and activation', async ({ page }) => {

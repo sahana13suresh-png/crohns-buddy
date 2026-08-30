@@ -14,8 +14,8 @@ The CloudFormation stack creates:
 
 - an AWS CodeCommit deployment repository;
 - an AWS Amplify Hosting `WEB_COMPUTE` app and production branch;
-- an Amazon Cognito user pool, app client, and managed-login domain using OAuth
-  authorization code flow with PKCE;
+- an Amazon Cognito user pool and app client for native email accounts, plus an
+  OAuth authorization-code flow with PKCE for optional social providers;
 - a DynamoDB on-demand table with deletion protection;
 - a least-privilege Amplify SSR compute role for DynamoDB item operations and Bedrock
   inference;
@@ -33,8 +33,9 @@ AWS_PROFILE=crohns-buddy-deploy ./scripts/deploy-aws.sh
 ```
 
 Email signup, email verification, signin, password recovery, and session management are
-handled by Cognito. Passwords are entered only on Cognito managed-login pages; the
-application stores its ID, access, and refresh tokens in Secure, HttpOnly cookies.
+handled by Cognito behind the application's branded account interface. Passwords are used
+only for the requested account operation and are never persisted by the application.
+ID, access, and refresh tokens are stored in Secure, HttpOnly cookies.
 
 Google social login is optional because Cognito requires credentials from a Google OAuth
 client. To enable it, configure this authorized redirect URI in Google:

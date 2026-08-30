@@ -105,7 +105,7 @@ export const RESTART_LABEL = 'Start the deletion over';
 export const REAUTH_SUBMIT_LABEL = 'Confirm it is you';
 export const REAUTH_CANCEL_LABEL = 'Cancel deletion';
 export const REAUTH_PRIVACY_MESSAGE =
-  "You will re-enter your credentials on Amazon Cognito's secure page. Crohn's Buddy does not receive or store your password.";
+  'For your security, you will be asked to confirm your identity again before continuing.';
 
 /** Requirement 11.2 — the categories the flow removes, listed before anything runs. */
 export const DELETION_CATEGORIES: readonly string[] = [

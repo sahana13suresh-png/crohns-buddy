@@ -12,6 +12,7 @@ vi.mock('@/lib/server/cognitoAuth', () => ({
     idToken: '__Host-cb-id-token',
     accessToken: '__Host-cb-access-token',
     refreshToken: '__Host-cb-refresh-token',
+    passwordChallenge: '__Host-cb-password-challenge',
     oauthState: '__Host-cb-oauth-state',
     oauthVerifier: '__Host-cb-oauth-verifier',
     oauthReturnTo: '__Host-cb-oauth-return-to',
