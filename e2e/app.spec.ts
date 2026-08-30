@@ -51,11 +51,16 @@ test('account modal provides a branded signup and recovery experience', async ({
   await expect(page.getByLabel('Confirm password')).toBeVisible();
   await expect(page.getByRole('button', { name: 'Create account' })).toBeEnabled();
   await expect(page.getByRole('dialog').getByText(/cognito|amazon cognito/i)).toHaveCount(0);
+  await expect(page.getByRole('dialog').getByText('Private by design')).toHaveCount(0);
 
   const google = page.getByRole('button', { name: 'Sign up with Google' });
-  if ((await google.count()) > 0) {
-    await expect(google).toBeEnabled();
-  }
+  await expect(google).toBeEnabled();
+  await expect(
+    page.getByRole('button', { name: 'Sign up with Facebook' }),
+  ).toBeDisabled();
+  await expect(
+    page.getByRole('button', { name: 'Sign up with LinkedIn' }),
+  ).toBeDisabled();
 
   await page.getByRole('button', { name: 'Already have an account?' }).click();
   await expect(page.getByRole('heading', { name: 'Log in with email' })).toBeVisible();

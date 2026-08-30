@@ -1,19 +1,15 @@
 'use client';
 
 /**
- * The Website's social signin controls.
+ * The Website's social sign-in controls.
  *
- * Requirement 3.10 makes the rendered set of controls a function of the
- * Deployment_Configuration rather than of the component: `NEXT_PUBLIC_AUTH_PROVIDERS`
- * is a comma-separated list (e.g. `google`), and an empty or absent value renders
- * zero controls while the Cognito email flow remains available. Requirement
- * 3.1 asks for *exactly one* control per configured Identity_Provider on both the
- * signin and the signup view, operable by pointer and by keyboard — so the control
- * is a plain `<button type="button">` with its label as visible text, and the
- * configured list is de-duplicated before rendering.
+ * All supported providers remain visible so the account experience has a stable,
+ * professional layout. `NEXT_PUBLIC_AUTH_PROVIDERS` determines which controls are
+ * active in a deployment; providers awaiting credentials are clearly marked and
+ * disabled rather than disappearing.
  *
  * The four provider outcomes each map to one message, taken straight from the
- * `GoogleSignInOutcome` union `signInWithGoogle` returns:
+ * `GoogleSignInOutcome` union `signInWithProvider` returns:
  *
  * - `cancelled` (3.6) — no message at all, since the Patient chose to stop.
  * - `failed` (3.7) — provider signin did not succeed; the Cognito email flow remains usable.
@@ -31,12 +27,20 @@
  */
 
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactElement } from 'react';
-import { signInWithGoogle, type GoogleSignInOutcome } from '@/lib/auth';
+import {
+  signInWithProvider,
+  type GoogleSignInOutcome,
+  type SocialProviderName,
+} from '@/lib/auth';
 
 // ─── Configured providers ──────────────────────────────────────────────────────
 
 /** Identity_Providers this build knows how to authenticate with. */
-export const RECOGNIZED_IDENTITY_PROVIDERS = ['google'] as const;
+export const RECOGNIZED_IDENTITY_PROVIDERS = [
+  'google',
+  'facebook',
+  'linkedin',
+] as const;
 
 export type IdentityProviderId = (typeof RECOGNIZED_IDENTITY_PROVIDERS)[number];
 
@@ -71,15 +75,16 @@ export function configuredIdentityProviders(): IdentityProviderId[] {
 // ─── Outcome messages ──────────────────────────────────────────────────────────
 
 /** Requirement 3.9 — timed out, and retryable. */
-export const PROVIDER_TIMED_OUT_MESSAGE = 'Google sign-in took too long. Please try again.';
+export const PROVIDER_TIMED_OUT_MESSAGE =
+  'Social sign-in took too long. Please try again.';
 
 /** Requirement 3.8 — authentication completed but returned no email address. */
 export const PROVIDER_NO_EMAIL_MESSAGE =
-  'Google did not share an email address, which is required to continue.';
+  'Your social account did not share an email address, which is required to continue.';
 
 /** Requirement 3.7 — the provider reported a failure. */
 export const PROVIDER_FAILED_MESSAGE =
-  'Google sign-in failed. Please try again, or continue with email.';
+  'Social sign-in failed. Please try again, or continue with email.';
 
 /**
  * The message for an outcome, or null when there is nothing to say: a signed-in
@@ -101,7 +106,11 @@ export function messageForProviderOutcome(outcome: GoogleSignInOutcome): string 
 
 // ─── Provider presentation ─────────────────────────────────────────────────────
 
-const PROVIDER_NAMES: Record<IdentityProviderId, string> = { google: 'Google' };
+const PROVIDER_NAMES: Record<IdentityProviderId, SocialProviderName> = {
+  google: 'Google',
+  facebook: 'Facebook',
+  linkedin: 'LinkedIn',
+};
 
 /** Google's mark, decorative: the button's visible text carries the label. */
 function GoogleMark(): ReactElement {
@@ -127,11 +136,44 @@ function GoogleMark(): ReactElement {
   );
 }
 
-const PROVIDER_MARKS: Record<IdentityProviderId, () => ReactElement> = { google: GoogleMark };
+function FacebookMark(): ReactElement {
+  return (
+    <svg
+      className="h-5 w-5 shrink-0"
+      viewBox="0 0 24 24"
+      aria-hidden="true"
+      focusable="false"
+    >
+      <circle cx="12" cy="12" r="11" fill="#1877F2" />
+      <path
+        d="M13.7 20v-7h2.35l.35-2.72h-2.7V8.54c0-.79.22-1.33 1.35-1.33h1.44V4.78a19.4 19.4 0 00-2.1-.11c-2.08 0-3.5 1.27-3.5 3.6v2.01H8.54V13h2.35v7h2.81z"
+        fill="#fff"
+      />
+    </svg>
+  );
+}
 
-/** The authentication call for a provider. One entry per recognized provider. */
-const PROVIDER_SIGN_IN: Record<IdentityProviderId, () => Promise<GoogleSignInOutcome>> = {
-  google: signInWithGoogle,
+function LinkedInMark(): ReactElement {
+  return (
+    <svg
+      className="h-5 w-5 shrink-0"
+      viewBox="0 0 24 24"
+      aria-hidden="true"
+      focusable="false"
+    >
+      <rect x="1" y="1" width="22" height="22" rx="3" fill="#0A66C2" />
+      <path
+        d="M6.1 9.1h2.7V18H6.1V9.1zm1.35-4.4a1.57 1.57 0 110 3.14 1.57 1.57 0 010-3.14zM10.55 9.1h2.58v1.22h.04c.36-.68 1.24-1.4 2.55-1.4 2.73 0 3.23 1.8 3.23 4.13V18h-2.69v-4.39c0-1.05-.02-2.39-1.46-2.39-1.46 0-1.68 1.14-1.68 2.31V18h-2.69l.12-8.9z"
+        fill="#fff"
+      />
+    </svg>
+  );
+}
+
+const PROVIDER_MARKS: Record<IdentityProviderId, () => ReactElement> = {
+  google: GoogleMark,
+  facebook: FacebookMark,
+  linkedin: LinkedInMark,
 };
 
 // ─── Component ─────────────────────────────────────────────────────────────────
@@ -174,6 +216,7 @@ export default function GoogleSignInButton({
       ),
     [providers]
   );
+  const configuredSet = useMemo(() => new Set(configured), [configured]);
 
   const [message, setMessage] = useState<string | null>(null);
   const [pending, setPending] = useState<IdentityProviderId | null>(null);
@@ -201,9 +244,9 @@ export default function GoogleSignInButton({
       setPending(provider);
       let outcome: GoogleSignInOutcome;
       try {
-        outcome = await PROVIDER_SIGN_IN[provider]();
+        outcome = await signInWithProvider(PROVIDER_NAMES[provider]);
       } catch {
-        // `signInWithGoogle` reports failures as outcomes, so a throw here is an
+        // Provider sign-in reports failures as outcomes, so a throw here is an
         // unexpected fault; it still must not leave the control stuck pending.
         outcome = { status: 'failed', code: 'auth/unknown' };
       }
@@ -215,27 +258,40 @@ export default function GoogleSignInButton({
     [onOutcome]
   );
 
-  // Requirement 3.10 — zero configured providers means zero controls. The email
-  // and password fields live in `AuthModal` and are unaffected.
-  if (configured.length === 0) return null;
-
   const verb = intent === 'signup' ? 'Sign up' : 'Sign in';
 
   return (
     <div className={className ?? 'space-y-3'}>
-      {configured.map((provider) => {
+      {RECOGNIZED_IDENTITY_PROVIDERS.map((provider) => {
         const Mark = PROVIDER_MARKS[provider];
+        const providerName = PROVIDER_NAMES[provider];
+        const isConfigured = configuredSet.has(provider);
+        const isDisabled = !isConfigured || pending !== null;
         return (
           <button
             key={provider}
             type="button"
             onClick={() => void startSignIn(provider)}
-            disabled={pending !== null}
+            disabled={isDisabled}
             aria-busy={pending === provider}
-            className="flex items-center gap-3 px-4 py-2.5 rounded-lg border border-gray-300 bg-white text-sm font-medium text-gray-700 hover:bg-gray-50 hover:border-gray-400 focus:outline-none focus:ring-2 focus:ring-brand-500 transition-colors shadow-sm disabled:opacity-60 disabled:cursor-not-allowed"
+            aria-label={`${verb} with ${providerName}`}
+            title={
+              isConfigured
+                ? undefined
+                : `${providerName} ${intent === 'signup' ? 'sign-up' : 'sign-in'} is coming soon`
+            }
+            className="flex items-center gap-3 rounded-lg border border-gray-300 bg-white px-4 py-2.5 text-sm font-medium text-gray-700 shadow-sm transition-colors hover:border-gray-400 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-brand-500 disabled:cursor-not-allowed disabled:bg-gray-50 disabled:text-gray-500 disabled:opacity-80"
           >
             <Mark />
-            {`${verb} with ${PROVIDER_NAMES[provider]}`}
+            <span className="flex-1 text-left">{`${verb} with ${providerName}`}</span>
+            {!isConfigured && (
+              <span
+                aria-hidden="true"
+                className="rounded-full bg-brand-100 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-brand-700"
+              >
+                Soon
+              </span>
+            )}
           </button>
         );
       })}

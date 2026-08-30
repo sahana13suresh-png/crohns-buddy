@@ -34,7 +34,7 @@ vi.mock('@/lib/auth', () => ({
   deleteCurrentAccount: vi.fn(async () => undefined),
   reauthenticate: vi.fn(async () => undefined),
   // Read at module scope by the provider controls `AuthModal` imports.
-  signInWithGoogle: vi.fn(async () => 'cancelled'),
+  signInWithProvider: vi.fn(async () => ({ status: 'cancelled' })),
 }));
 
 // ─── Fixtures ──────────────────────────────────────────────────────────────────

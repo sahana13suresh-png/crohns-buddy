@@ -45,6 +45,20 @@ Parameters:
     Type: String
     NoEcho: true
     Default: ''
+  FacebookClientId:
+    Type: String
+    Default: ''
+  FacebookClientSecret:
+    Type: String
+    NoEcho: true
+    Default: ''
+  LinkedInClientId:
+    Type: String
+    Default: ''
+  LinkedInClientSecret:
+    Type: String
+    NoEcho: true
+    Default: ''
   PerspectiveApiKey:
     Type: String
     NoEcho: true
@@ -56,6 +70,12 @@ Conditions:
   HasGoogleProvider: !And
     - !Not [!Equals [!Ref GoogleClientId, '']]
     - !Not [!Equals [!Ref GoogleClientSecret, '']]
+  HasFacebookProvider: !And
+    - !Not [!Equals [!Ref FacebookClientId, '']]
+    - !Not [!Equals [!Ref FacebookClientSecret, '']]
+  HasLinkedInProvider: !And
+    - !Not [!Equals [!Ref LinkedInClientId, '']]
+    - !Not [!Equals [!Ref LinkedInClientSecret, '']]
 
 Resources:
   SourceRepository:
@@ -156,6 +176,40 @@ Resources:
         name: name
         username: sub
 
+  FacebookIdentityProvider:
+    Type: AWS::Cognito::UserPoolIdentityProvider
+    Condition: HasFacebookProvider
+    Properties:
+      ProviderName: Facebook
+      ProviderType: Facebook
+      UserPoolId: !Ref UserPool
+      ProviderDetails:
+        client_id: !Ref FacebookClientId
+        client_secret: !Ref FacebookClientSecret
+        authorize_scopes: public_profile, email
+      AttributeMapping:
+        email: email
+        name: name
+        username: id
+
+  LinkedInIdentityProvider:
+    Type: AWS::Cognito::UserPoolIdentityProvider
+    Condition: HasLinkedInProvider
+    Properties:
+      ProviderName: LinkedIn
+      ProviderType: OIDC
+      UserPoolId: !Ref UserPool
+      ProviderDetails:
+        client_id: !Ref LinkedInClientId
+        client_secret: !Ref LinkedInClientSecret
+        authorize_scopes: openid email profile
+        oidc_issuer: https://www.linkedin.com/oauth
+        attributes_request_method: GET
+      AttributeMapping:
+        email: email
+        name: name
+        username: sub
+
   UserPoolClient:
     Type: AWS::Cognito::UserPoolClient
     Properties:
@@ -181,6 +235,8 @@ Resources:
       SupportedIdentityProviders:
         - COGNITO
         - !If [HasGoogleProvider, !Ref GoogleIdentityProvider, !Ref 'AWS::NoValue']
+        - !If [HasFacebookProvider, !Ref FacebookIdentityProvider, !Ref 'AWS::NoValue']
+        - !If [HasLinkedInProvider, !Ref LinkedInIdentityProvider, !Ref 'AWS::NoValue']
       PreventUserExistenceErrors: ENABLED
       EnableTokenRevocation: true
       AccessTokenValidity: 60
@@ -331,7 +387,11 @@ Resources:
         - Name: NEXT_PUBLIC_AUTH_ENABLED
           Value: 'true'
         - Name: NEXT_PUBLIC_AUTH_PROVIDERS
-          Value: !If [HasGoogleProvider, google, '']
+          Value: !Join
+            - ','
+            - - !If [HasGoogleProvider, google, '']
+              - !If [HasFacebookProvider, facebook, '']
+              - !If [HasLinkedInProvider, linkedin, '']
         - Name: COGNITO_AWS_REGION
           Value: !Ref AWS::Region
         - Name: COGNITO_USER_POOL_ID
@@ -347,7 +407,11 @@ Resources:
               - !Ref AmplifyProductionUrl
               - !Ref LocalDevelopmentUrl
         - Name: AUTH_SOCIAL_PROVIDERS
-          Value: !If [HasGoogleProvider, Google, '']
+          Value: !Join
+            - ','
+            - - !If [HasGoogleProvider, Google, '']
+              - !If [HasFacebookProvider, Facebook, '']
+              - !If [HasLinkedInProvider, LinkedIn, '']
       Tags:
         - Key: application
           Value: crohns-buddy
@@ -469,3 +533,7 @@ Outputs:
     Value: !Sub https://${CognitoDomainPrefix}.auth.${AWS::Region}.amazoncognito.com
   GoogleSocialLoginStatus:
     Value: !If [HasGoogleProvider, ENABLED, AWAITING_PROVIDER_CREDENTIALS]
+  FacebookSocialLoginStatus:
+    Value: !If [HasFacebookProvider, ENABLED, AWAITING_PROVIDER_CREDENTIALS]
+  LinkedInSocialLoginStatus:
+    Value: !If [HasLinkedInProvider, ENABLED, AWAITING_PROVIDER_CREDENTIALS]

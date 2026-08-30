@@ -924,7 +924,8 @@ describe('session validity as a function of age', () => {
  *   absent one" clause is checked against that function directly.
  * - **The rendering.** The Auth_UI renders the branded native account form and
  *   the second half renders the real `AuthModal` on both views, checking the
- *   provider controls against the deployment configuration.
+ *   provider controls against the deployment configuration. Every supported
+ *   choice remains visible, while only configured choices are operable.
  *
  * The expected provider list is never obtained by re-running the parse. Each
  * comma segment is generated together with the provider it names, so the
@@ -957,7 +958,11 @@ const RECOGNIZED_PROVIDERS: readonly Property23ProviderId[] =
  * record over the union so adding a provider to the build fails to compile here
  * rather than silently leaving the new control unchecked.
  */
-const PROVIDER_LABELS: Record<Property23ProviderId, string> = { google: 'Google' };
+const PROVIDER_LABELS: Record<Property23ProviderId, string> = {
+  google: 'Google',
+  facebook: 'Facebook',
+  linkedin: 'LinkedIn',
+};
 
 const escapeForRegExp = (value: string): string => value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 
@@ -967,7 +972,7 @@ const PROVIDER_CONTROL_PATTERN = new RegExp(
 );
 
 /** Names a deployment might put in the list that no build recognizes. */
-const UNRELATED_PROVIDER_NAMES = ['facebook', 'apple', 'twitter', 'microsoft', 'okta'] as const;
+const UNRELATED_PROVIDER_NAMES = ['apple', 'twitter', 'microsoft', 'okta', 'github'] as const;
 
 /** Whitespace a hand-edited `.env` file leaves around an entry, plus none at all. */
 const arbConfigPadding = fc.constantFrom('', ' ', '  ', '\t', '\n', ' \r\n ', '\u00a0');
@@ -1158,7 +1163,7 @@ describe('Identity_Provider controls mirror the Deployment_Configuration', () =>
     );
   });
 
-  it('renders one control per configured provider alongside the native account form', async () => {
+  it('renders every supported choice and enables only configured providers', async () => {
     const { createElement } = property23Modules.react;
     const { cleanup, render, screen } = property23Modules.rtl;
     const AuthModal = property23Modules.authModal.default;
@@ -1184,24 +1189,27 @@ describe('Identity_Provider controls mirror the Deployment_Configuration', () =>
 
               const verb = mode === 'signup' ? 'Sign up' : 'Sign in';
 
-              // Exactly one control for each recognized provider the
-              // configuration names, and none for one it does not.
+              // Exactly one control for every supported provider. Deployment
+              // configuration determines whether each choice is operable.
               for (const id of RECOGNIZED_PROVIDERS) {
                 const controls = screen.queryAllByRole('button', {
                   name: `${verb} with ${PROVIDER_LABELS[id]}`,
                 });
-                expect(controls).toHaveLength(expected.includes(id) ? 1 : 0);
+                expect(controls).toHaveLength(1);
                 for (const control of controls) {
-                  // Operable rather than decorative: a real button, not disabled.
                   expect(control.tagName).toBe('BUTTON');
-                  expect(control).toBeEnabled();
+                  if (expected.includes(id)) {
+                    expect(control).toBeEnabled();
+                  } else {
+                    expect(control).toBeDisabled();
+                  }
                 }
               }
 
-              // No further social signin control beyond those, so a duplicated or
-              // a malformed entry adds nothing.
+              // No further social sign-in control beyond the supported set, so
+              // duplicates and malformed entries add nothing.
               expect(screen.queryAllByRole('button', { name: PROVIDER_CONTROL_PATTERN })).toHaveLength(
-                expected.length,
+                RECOGNIZED_PROVIDERS.length,
               );
 
               // An unrecognized name in the configuration produces no control at

@@ -9,7 +9,7 @@ import {
 } from 'react';
 
 import GoogleSignInButton, {
-  configuredIdentityProviders,
+  RECOGNIZED_IDENTITY_PROVIDERS,
 } from '@/components/auth/GoogleSignInButton';
 import {
   classifyAuthError,
@@ -118,7 +118,7 @@ export default function AuthModal({
   const nameId = useId();
   const codeId = useId();
   const isSignup = mode === 'signup';
-  const socialProviders = configuredIdentityProviders();
+  const socialProviders = RECOGNIZED_IDENTITY_PROVIDERS;
 
   const [view, setView] = useState<AuthView>('credentials');
   const [displayName, setDisplayName] = useState('');
@@ -378,15 +378,6 @@ export default function AuthModal({
               </>
             )}
 
-            <div className="mt-8 hidden rounded-xl border border-brand-800/10 bg-white/70 p-4 md:block">
-              <p className="text-sm font-semibold text-brand-800">
-                Private by design
-              </p>
-              <p className="mt-1 text-xs leading-5 text-brand-800/55">
-                Your password is encrypted in transit and is never stored by
-                Crohn&apos;s Buddy.
-              </p>
-            </div>
           </aside>
 
           <div className="relative flex items-center px-7 py-10 sm:px-12">

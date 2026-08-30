@@ -30,6 +30,8 @@ export type GoogleSignInOutcome =
   | { status: 'no-email' }
   | { status: 'failed'; code: string };
 
+export type SocialProviderName = 'Google' | 'Facebook' | 'LinkedIn';
+
 export type AuthErrorKind =
   | 'email-already-in-use'
   | 'weak-password'
@@ -522,12 +524,18 @@ export async function getIdTokenForRequest(): Promise<string | null> {
   return null;
 }
 
-export async function signInWithGoogle(): Promise<GoogleSignInOutcome> {
+export async function signInWithProvider(
+  provider: SocialProviderName,
+): Promise<GoogleSignInOutcome> {
   if (!isCognitoConfigured()) {
     return { status: 'failed', code: 'auth/not-configured' };
   }
-  navigate(authStartUrl({ intent: 'signin', provider: 'Google' }));
+  navigate(authStartUrl({ intent: 'signin', provider }));
   return { status: 'cancelled' };
+}
+
+export async function signInWithGoogle(): Promise<GoogleSignInOutcome> {
+  return signInWithProvider('Google');
 }
 
 export async function completeRedirectSignIn(): Promise<GoogleSignInOutcome | null> {

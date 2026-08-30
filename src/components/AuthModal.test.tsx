@@ -12,7 +12,7 @@ const authMocks = vi.hoisted(() => ({
   requestPasswordReset: vi.fn(),
   confirmPasswordReset: vi.fn(),
   confirmSignInMfa: vi.fn(),
-  signInWithGoogle: vi.fn(async () => ({ status: 'cancelled' as const })),
+  signInWithProvider: vi.fn(async () => ({ status: 'cancelled' as const })),
 }));
 
 vi.mock('@/lib/auth', async (importOriginal) => {
@@ -149,15 +149,23 @@ describe('account modal', () => {
     ).toBeVisible();
   });
 
-  it('offers the configured Google provider and keeps it keyboard-operable', async () => {
+  it('offers all social choices and keeps configured providers keyboard-operable', async () => {
     const user = userEvent.setup();
     renderModal();
 
     const google = screen.getByRole('button', { name: 'Sign in with Google' });
+    expect(google).toBeEnabled();
+    expect(
+      screen.getByRole('button', { name: 'Sign in with Facebook' }),
+    ).toBeDisabled();
+    expect(
+      screen.getByRole('button', { name: 'Sign in with LinkedIn' }),
+    ).toBeDisabled();
+    expect(screen.queryByText('Private by design')).not.toBeInTheDocument();
     google.focus();
     await user.keyboard('{Enter}');
 
-    expect(authMocks.signInWithGoogle).toHaveBeenCalledTimes(1);
+    expect(authMocks.signInWithProvider).toHaveBeenCalledWith('Google');
   });
 
   it('switches modes, closes with Escape, and links to the privacy notice', async () => {

@@ -14,10 +14,12 @@ import type { GoogleSignInOutcome } from '@/lib/auth';
  * each provider outcome (3.6 through 3.9).
  */
 
-const signInWithGoogle = vi.fn<() => Promise<GoogleSignInOutcome>>();
+const signInWithProvider =
+  vi.fn<(provider: 'Google' | 'Facebook' | 'LinkedIn') => Promise<GoogleSignInOutcome>>();
 
 vi.mock('@/lib/auth', () => ({
-  signInWithGoogle: () => signInWithGoogle(),
+  signInWithProvider: (provider: 'Google' | 'Facebook' | 'LinkedIn') =>
+    signInWithProvider(provider),
 }));
 
 const GOOGLE_CONTROL = { name: /sign in with google/i } as const;
@@ -28,11 +30,15 @@ describe('parseConfiguredProviders', () => {
     expect(parseConfiguredProviders(null)).toEqual([]);
     expect(parseConfiguredProviders('')).toEqual([]);
     expect(parseConfiguredProviders('   ')).toEqual([]);
-    expect(parseConfiguredProviders('facebook, apple')).toEqual([]);
+    expect(parseConfiguredProviders('apple, twitter')).toEqual([]);
   });
 
   it('keeps each recognized provider exactly once, ignoring case, spacing, and repeats', () => {
-    expect(parseConfiguredProviders(' GOOGLE , facebook ,google,')).toEqual(['google']);
+    expect(parseConfiguredProviders(' GOOGLE , facebook , LinkedIn,google,')).toEqual([
+      'google',
+      'facebook',
+      'linkedin',
+    ]);
   });
 
   it('reads the deployment configuration', () => {
@@ -44,30 +50,40 @@ describe('parseConfiguredProviders', () => {
 
 describe('GoogleSignInButton', () => {
   beforeEach(() => {
-    signInWithGoogle.mockReset().mockResolvedValue({ status: 'cancelled' });
+    signInWithProvider.mockReset().mockResolvedValue({ status: 'cancelled' });
   });
 
-  it('renders exactly one control for the configured provider, labelled and keyboard-operable', async () => {
+  it('enables the configured provider and keeps all supported choices visible', async () => {
     render(<GoogleSignInButton providers="google,google" />);
 
     expect(screen.getAllByRole('button', GOOGLE_CONTROL)).toHaveLength(1);
+    expect(screen.getByRole('button', GOOGLE_CONTROL)).toBeEnabled();
+    expect(
+      screen.getByRole('button', { name: /sign in with facebook/i }),
+    ).toBeDisabled();
+    expect(
+      screen.getByRole('button', { name: /sign in with linkedin/i }),
+    ).toBeDisabled();
 
-    // Keyboard operability (Requirement 3.1): the control is reachable by Tab and
-    // activated by Enter, with no pointer involved.
     await userEvent.tab();
     expect(screen.getByRole('button', GOOGLE_CONTROL)).toHaveFocus();
     await userEvent.keyboard('{Enter}');
 
-    await waitFor(() => expect(signInWithGoogle).toHaveBeenCalledTimes(1));
+    await waitFor(() =>
+      expect(signInWithProvider).toHaveBeenCalledWith('Google'),
+    );
   });
 
-  it.each([undefined, '', '  ', 'facebook'])(
-    'renders no control for the configuration %o',
+  it.each([undefined, '', '  ', 'apple'])(
+    'renders disabled provider choices for the configuration %o',
     (providers) => {
-      const { container } = render(<GoogleSignInButton providers={providers ?? ''} />);
-      expect(container).toBeEmptyDOMElement();
-      expect(screen.queryByRole('button')).not.toBeInTheDocument();
-    }
+      render(<GoogleSignInButton providers={providers ?? ''} />);
+      expect(screen.getAllByRole('button')).toHaveLength(3);
+      for (const control of screen.getAllByRole('button')) {
+        expect(control).toBeDisabled();
+      }
+      expect(screen.getAllByText('Soon')).toHaveLength(3);
+    },
   );
 
   it('labels the control for the signup view', () => {
@@ -76,7 +92,7 @@ describe('GoogleSignInButton', () => {
   });
 
   it('shows no message when the Patient cancels the provider window', async () => {
-    signInWithGoogle.mockResolvedValue({ status: 'cancelled' });
+    signInWithProvider.mockResolvedValue({ status: 'cancelled' });
     const onOutcome = vi.fn();
     render(<GoogleSignInButton providers="google" onOutcome={onOutcome} />);
 
@@ -91,7 +107,7 @@ describe('GoogleSignInButton', () => {
     [{ status: 'no-email' }, /email address/i],
     [{ status: 'failed', code: 'auth/internal-error' }, /sign-in failed/i],
   ] as const)('explains the %o outcome', async (outcome, expected) => {
-    signInWithGoogle.mockResolvedValue(outcome);
+    signInWithProvider.mockResolvedValue(outcome);
     render(<GoogleSignInButton providers="google" />);
 
     await userEvent.click(screen.getByRole('button', GOOGLE_CONTROL));
@@ -114,13 +130,13 @@ describe('GoogleSignInButton', () => {
   });
 
   it('clears a stale message when a fresh attempt starts', async () => {
-    signInWithGoogle.mockResolvedValue({ status: 'timed-out' });
+    signInWithProvider.mockResolvedValue({ status: 'timed-out' });
     render(<GoogleSignInButton providers="google" />);
 
     await userEvent.click(screen.getByRole('button', GOOGLE_CONTROL));
     expect(await screen.findByRole('alert')).toBeInTheDocument();
 
-    signInWithGoogle.mockResolvedValue({
+    signInWithProvider.mockResolvedValue({
       status: 'signed-in',
       session: {
         userId: 'uid-1',

@@ -12,12 +12,14 @@ import type { ForumMessage } from '@/lib/types';
  * reads, and which message it shows for each `GoogleSignInOutcome` variant.
  */
 
-const signInWithGoogle = vi.fn<() => Promise<GoogleSignInOutcome>>();
+const signInWithProvider =
+  vi.fn<(provider: 'Google' | 'Facebook' | 'LinkedIn') => Promise<GoogleSignInOutcome>>();
 const signOut = vi.fn<() => Promise<void>>();
 let emitSession: (session: AuthSession | null) => void = () => {};
 
 vi.mock('@/lib/auth', () => ({
-  signInWithGoogle: () => signInWithGoogle(),
+  signInWithProvider: (provider: 'Google' | 'Facebook' | 'LinkedIn') =>
+    signInWithProvider(provider),
   signOut: () => signOut(),
   onAuthChange: (callback: (session: AuthSession | null) => void) => {
     emitSession = callback;
@@ -57,7 +59,7 @@ describe('ChatForum', () => {
     // The signin control mirrors the Deployment_Configuration (Requirement 3.10),
     // so the provider list has to be configured for it to render at all.
     vi.stubEnv('NEXT_PUBLIC_AUTH_PROVIDERS', 'google');
-    signInWithGoogle.mockReset();
+    signInWithProvider.mockReset();
     signOut.mockReset().mockResolvedValue(undefined);
     postForumMessage.mockReset().mockResolvedValue('doc-1');
     vi.stubGlobal(
@@ -92,12 +94,12 @@ describe('ChatForum', () => {
   });
 
   it('stays silent when the Patient cancels the provider window', async () => {
-    signInWithGoogle.mockResolvedValue({ status: 'cancelled' });
+    signInWithProvider.mockResolvedValue({ status: 'cancelled' });
     render(<ChatForum />);
 
     await userEvent.click(await screen.findByRole('button', { name: /sign in with google/i }));
 
-    await waitFor(() => expect(signInWithGoogle).toHaveBeenCalledTimes(1));
+    await waitFor(() => expect(signInWithProvider).toHaveBeenCalledTimes(1));
     expect(screen.queryByRole('alert')).not.toBeInTheDocument();
   });
 
@@ -106,7 +108,7 @@ describe('ChatForum', () => {
     ['no-email', /email address/i],
     ['failed', /sign-in failed/i],
   ] as const)('explains the %s outcome', async (status, expected) => {
-    signInWithGoogle.mockResolvedValue(
+    signInWithProvider.mockResolvedValue(
       status === 'failed' ? { status, code: 'auth/internal-error' } : { status }
     );
     render(<ChatForum />);
