@@ -102,6 +102,6 @@ describe('AccountMenu', () => {
     await user.click(screen.getByRole('button', { name: 'Log In' }));
 
     expect(dismissExpiredMessage).toHaveBeenCalledTimes(1);
-    expect(screen.getByRole('heading', { name: 'Log In' })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Welcome back' })).toBeInTheDocument();
   });
 });

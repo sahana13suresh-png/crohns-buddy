@@ -66,7 +66,7 @@ import {
 } from '@/lib/accountDeletion';
 import { exportFileName } from '@/lib/accountExportFile';
 import { callApi } from '@/lib/apiClient';
-import { isFirebaseConfigured } from '@/lib/firebaseClient';
+import { isCognitoConfigured } from '@/lib/auth';
 import { getAllEntries, type TrackerEntries } from '@/lib/trackerStorage';
 // Type-only, so no module edge is created into the route's dependency graph —
 // that module reaches the DynamoDB client, which has no business in a browser
@@ -104,6 +104,8 @@ export const KEEP_ACCOUNT_LABEL = 'Keep my account';
 export const RESTART_LABEL = 'Start the deletion over';
 export const REAUTH_SUBMIT_LABEL = 'Confirm it is you';
 export const REAUTH_CANCEL_LABEL = 'Cancel deletion';
+export const REAUTH_PRIVACY_MESSAGE =
+  "You will re-enter your credentials on Amazon Cognito's secure page. Crohn's Buddy does not receive or store your password.";
 
 /** Requirement 11.2 — the categories the flow removes, listed before anything runs. */
 export const DELETION_CATEGORIES: readonly string[] = [
@@ -165,7 +167,7 @@ export interface AccountSettingsPageProps {
 }
 
 export default function AccountSettingsPage({ deletionPorts }: AccountSettingsPageProps = {}) {
-  const authConfigured = isFirebaseConfigured();
+  const authConfigured = isCognitoConfigured();
   const { session, status } = useSession();
 
   const ports = useMemo(
@@ -180,7 +182,6 @@ export default function AccountSettingsPage({ deletionPorts }: AccountSettingsPa
   /** Null while the flow has not been started (Requirement 11.1). */
   const [deletion, setDeletion] = useState<DeletionContext | null>(null);
   const [deletionBusy, setDeletionBusy] = useState(false);
-  const [password, setPassword] = useState('');
   const [modalMode, setModalMode] = useState<'login' | 'signup' | null>(null);
 
   const mounted = useRef(true);
@@ -240,7 +241,6 @@ export default function AccountSettingsPage({ deletionPorts }: AccountSettingsPa
 
   const startDeletion = useCallback(() => {
     setDeletion(initialDeletionContext());
-    setPassword('');
   }, []);
 
   const changeConfirmationText = useCallback((text: string) => {
@@ -277,23 +277,15 @@ export default function AccountSettingsPage({ deletionPorts }: AccountSettingsPa
     busyRef.current = true;
     setDeletionBusy(true);
 
-    // A blank field means "re-authenticate through the Identity_Provider",
-    // which is the only route open to a Google-only Account.
-    const next = await submitReauthentication(
-      deletion,
-      ports,
-      password.length > 0 ? password : undefined
-    );
+    const next = await submitReauthentication(deletion, ports);
 
     busyRef.current = false;
     if (!mounted.current) return;
-    setPassword('');
     setDeletionBusy(false);
     setDeletion(next);
-  }, [deletion, password, ports]);
+  }, [deletion, ports]);
 
   const cancelReauth = useCallback(() => {
-    setPassword('');
     setDeletion((current) =>
       current === null ? current : reduceDeletion(current, { type: 'reauth-cancelled' })
     );
@@ -307,7 +299,6 @@ export default function AccountSettingsPage({ deletionPorts }: AccountSettingsPa
 
   const closeDeletion = useCallback(() => {
     setDeletion(null);
-    setPassword('');
   }, []);
 
   // ── Derived state ──
@@ -498,19 +489,7 @@ export default function AccountSettingsPage({ deletionPorts }: AccountSettingsPa
               }}
               className="space-y-4"
             >
-              <div>
-                <label htmlFor="deletion-password" className={LABEL_CLASS}>
-                  Password (leave blank if you sign in with Google)
-                </label>
-                <input
-                  id="deletion-password"
-                  type="password"
-                  autoComplete="current-password"
-                  value={password}
-                  onChange={(event) => setPassword(event.target.value)}
-                  className={INPUT_CLASS}
-                />
-              </div>
+              <p className="text-sm text-brand-800/65">{REAUTH_PRIVACY_MESSAGE}</p>
 
               <div className="flex flex-wrap gap-3">
                 <button type="submit" disabled={deletionBusy} className="btn-primary">

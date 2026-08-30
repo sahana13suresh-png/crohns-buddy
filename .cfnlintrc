@@ -1,0 +1,4 @@
+ignore_checks:
+  # cfn-lint's IAM action catalog currently omits this valid DynamoDB API
+  # action, which the repository uses for atomic metadata and record writes.
+  - W3037

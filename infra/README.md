@@ -14,6 +14,8 @@ The CloudFormation stack creates:
 
 - an AWS CodeCommit deployment repository;
 - an AWS Amplify Hosting `WEB_COMPUTE` app and production branch;
+- an Amazon Cognito user pool, app client, and managed-login domain using OAuth
+  authorization code flow with PKCE;
 - a DynamoDB on-demand table with deletion protection;
 - a least-privilege Amplify SSR compute role for DynamoDB item operations and Bedrock
   inference;
@@ -30,13 +32,25 @@ protection enabled because it stores patient-generated data.
 AWS_PROFILE=crohns-buddy-deploy ./scripts/deploy-aws.sh
 ```
 
-Firebase configuration is optional. Without it, account, saved-plan, and community features
-show an explicit configuration message; the public tracker, resources, and AI planner remain
-available. To enable Firebase during deployment, export the `NEXT_PUBLIC_FIREBASE_*`
-variables and optionally `NEXT_PUBLIC_AUTH_PROVIDERS=google` before running the script.
+Email signup, email verification, signin, password recovery, and session management are
+handled by Cognito. Passwords are entered only on Cognito managed-login pages; the
+application stores its ID, access, and refresh tokens in Secure, HttpOnly cookies.
+
+Google social login is optional because Cognito requires credentials from a Google OAuth
+client. To enable it, configure this authorized redirect URI in Google:
+
+```text
+https://crohns-buddy-853513360253.auth.us-east-1.amazoncognito.com/oauth2/idpresponse
+```
+
+Then deploy with `GOOGLE_OAUTH_CLIENT_ID` and `GOOGLE_OAUTH_CLIENT_SECRET` exported in the
+shell. The CloudFormation template leaves Google disabled when either value is absent.
 
 The deployment uses the Amplify SSR compute role through the AWS SDK default credential
 provider. No long-lived AWS access key or Bedrock bearer token is stored in Amplify.
+The Next.js build injects platform-managed values only into its server compilation. This
+keeps SSR configuration available on Amplify without placing secrets in browser bundles or
+public static assets.
 
 ## Verify
 

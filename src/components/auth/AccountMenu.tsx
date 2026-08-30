@@ -30,7 +30,7 @@ import { useEffect, useState } from 'react';
 import AuthModal from '@/components/AuthModal';
 import { messageForProviderOutcome } from '@/components/auth/GoogleSignInButton';
 import { useSession } from '@/components/auth/SessionProvider';
-import { isFirebaseConfigured } from '@/lib/firebaseClient';
+import { isCognitoConfigured } from '@/lib/auth';
 
 type AuthModalMode = 'login' | 'signup';
 
@@ -38,7 +38,7 @@ const CONTROL_CLASS =
   'text-xs uppercase tracking-widest text-brand-800/60 hover:text-brand-800 transition-opacity duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-400 rounded-sm';
 
 export default function AccountMenu() {
-  const authConfigured = isFirebaseConfigured();
+  const authConfigured = isCognitoConfigured();
   const {
     session,
     status,

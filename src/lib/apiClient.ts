@@ -8,8 +8,8 @@
  * - **The 10-second bound** (Requirements 5.11, 6.6, 8.5, 8.8, 10.9) is the
  *   default timeout, enforced with `AbortController` — the same pattern
  *   `src/lib/bedrock.ts` uses for its 90-second Bedrock timeout.
- * - **The Auth_Token** is attached from `getIdTokenForRequest()`, so no caller
- *   reads the token itself.
+ * - **The Cognito session** stays in same-origin Secure, HttpOnly cookies, so
+ *   browser JavaScript never reads or attaches an identity token.
  * - **`unauthorized` is handled centrally**: the Session is discarded and every
  *   subscriber is notified so the plan list empties and the expiry message
  *   appears. That is the same path Requirement 2.13 describes for an elapsed
@@ -20,7 +20,7 @@
  * beside the data that is already on screen, never a reset of that data.
  */
 
-import { getIdTokenForRequest, signOutEverywhere } from './auth';
+import { fetchAuthSession, signOutEverywhere } from './auth';
 
 // ─── Types ─────────────────────────────────────────────────────────────────────
 
@@ -154,15 +154,8 @@ function kindForStatus(status: number): ApiFailureKind {
 
 // ─── Request and response plumbing ─────────────────────────────────────────────
 
-async function buildHeaders(init: RequestInit): Promise<Headers> {
+function buildHeaders(init: RequestInit): Headers {
   const headers = new Headers(init.headers);
-
-  if (!headers.has('Authorization')) {
-    const token = await getIdTokenForRequest();
-    if (token) {
-      headers.set('Authorization', `Bearer ${token}`);
-    }
-  }
 
   if (init.body !== undefined && init.body !== null && !headers.has('Content-Type')) {
     headers.set('Content-Type', 'application/json');
@@ -202,8 +195,8 @@ function failure(kind: ApiFailureKind, message?: string | null): { ok: false; ki
 // ─── The wrapper ───────────────────────────────────────────────────────────────
 
 /**
- * Performs one request against the Website's own API, attaching the Auth_Token
- * and bounding the wait, and reports the outcome as a value rather than by
+ * Performs one same-origin request against the Website's own API, bounding the
+ * wait and reporting the outcome as a value rather than by
  * throwing — every failure a caller must render is a `kind` in `ApiResult`.
  *
  * A `204 No Content` response resolves to `{ ok: true }` with `data` absent, so
@@ -218,7 +211,7 @@ export async function callApi<T>(
 
   let headers: Headers;
   try {
-    headers = await buildHeaders(init);
+    headers = buildHeaders(init);
   } catch {
     // The token read failed outright, which is not a signal about the Session's
     // validity — the request simply never left. Reported as retryable.
@@ -230,7 +223,12 @@ export async function callApi<T>(
 
   let response: Response;
   try {
-    response = await fetch(path, { ...init, headers, signal: controller.signal });
+    response = await fetch(path, {
+      ...init,
+      headers,
+      credentials: init.credentials ?? 'same-origin',
+      signal: controller.signal,
+    });
   } catch (error: unknown) {
     clearTimeout(timeoutId);
     if (error instanceof Error && error.name === 'AbortError') {
@@ -240,6 +238,31 @@ export async function callApi<T>(
   }
 
   clearTimeout(timeoutId);
+
+  // Cognito tokens are HttpOnly, so the browser cannot refresh them itself.
+  // The session endpoint rotates them server-side. Retry a refused request once
+  // after that refresh, then treat a second refusal as an expired Session.
+  if (response.status === 401) {
+    try {
+      const session = await fetchAuthSession();
+      if (session !== null) {
+        const retryController = new AbortController();
+        const retryTimeout = setTimeout(() => retryController.abort(), timeoutMs);
+        try {
+          response = await fetch(path, {
+            ...init,
+            headers,
+            credentials: init.credentials ?? 'same-origin',
+            signal: retryController.signal,
+          });
+        } finally {
+          clearTimeout(retryTimeout);
+        }
+      }
+    } catch {
+      // The original 401 remains authoritative.
+    }
+  }
 
   const body = await readJsonBody(response);
 

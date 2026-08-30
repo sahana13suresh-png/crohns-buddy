@@ -6,7 +6,7 @@
  * Requirement 3.10 makes the rendered set of controls a function of the
  * Deployment_Configuration rather than of the component: `NEXT_PUBLIC_AUTH_PROVIDERS`
  * is a comma-separated list (e.g. `google`), and an empty or absent value renders
- * zero controls while the email and password fields carry on untouched. Requirement
+ * zero controls while the Cognito email flow remains available. Requirement
  * 3.1 asks for *exactly one* control per configured Identity_Provider on both the
  * signin and the signup view, operable by pointer and by keyboard — so the control
  * is a plain `<button type="button">` with its label as visible text, and the
@@ -16,7 +16,7 @@
  * `GoogleSignInOutcome` union `signInWithGoogle` returns:
  *
  * - `cancelled` (3.6) — no message at all, since the Patient chose to stop.
- * - `failed` (3.7) — provider signin did not succeed; email and password stay usable.
+ * - `failed` (3.7) — provider signin did not succeed; the Cognito email flow remains usable.
  * - `no-email` (3.8) — an address is required to continue.
  * - `timed-out` (3.9) — the attempt can be retried.
  *
@@ -79,7 +79,7 @@ export const PROVIDER_NO_EMAIL_MESSAGE =
 
 /** Requirement 3.7 — the provider reported a failure. */
 export const PROVIDER_FAILED_MESSAGE =
-  'Google sign-in failed. Please try again, or use your email and password.';
+  'Google sign-in failed. Please try again, or continue with email.';
 
 /**
  * The message for an outcome, or null when there is nothing to say: a signed-in

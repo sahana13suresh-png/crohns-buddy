@@ -922,12 +922,10 @@ describe('session validity as a function of age', () => {
  *   `NEXT_PUBLIC_AUTH_PROVIDERS` becomes a list of Identity_Providers, so the
  *   "exactly one per recognized configured provider, none for an unrecognized or
  *   absent one" clause is checked against that function directly.
- * - **The rendering.** The clause about the email and password fields is a
- *   statement about the Auth_UI, and those fields live in `AuthModal`, not in the
- *   provider control. So the second half renders the real `AuthModal` — signin
- *   view and signup view both, since Requirement 3.1 names both — with the
- *   Deployment_Configuration supplied through the environment variable the
- *   deployment actually sets.
+ * - **The rendering.** The Auth_UI deliberately renders no password field:
+ *   credentials are collected only by Cognito managed login. The second half
+ *   renders the real `AuthModal` on both views and checks the managed-login
+ *   controls against the deployment configuration.
  *
  * The expected provider list is never obtained by re-running the parse. Each
  * comma segment is generated together with the provider it names, so the
@@ -1124,24 +1122,6 @@ const arbProviderConfigCase: fc.Arbitrary<ProviderConfigCase> = fc.oneof(
   },
 );
 
-/**
- * Values typed into the email and password fields to show they accept input.
- *
- * Line terminators are removed from the generated password: a single-line
- * `<input>` strips CR and LF from its value by specification, so a value
- * containing one lies outside the field's input space and its absence afterwards
- * says nothing about whether the field accepts input.
- */
-const arbTypedCredentials = fc.record({
-  email: fc
-    .tuple(fc.hexaString({ minLength: 1, maxLength: 8 }), fc.constantFrom('example.com', 'mail.test'))
-    .map(([local, domain]) => `${local}@${domain}`),
-  password: arbTrickyString(1, 12).map((value) => {
-    const singleLine = value.replace(/[\r\n]/g, '');
-    return singleLine.length > 0 ? singleLine : 'p';
-  }),
-});
-
 describe('Identity_Provider controls mirror the Deployment_Configuration', () => {
   // Feature: user-auth-and-cloud-storage, Property 23: Identity_Provider controls
   // mirror the Deployment_Configuration.
@@ -1179,17 +1159,16 @@ describe('Identity_Provider controls mirror the Deployment_Configuration', () =>
     );
   });
 
-  it('renders one control per configured provider on both views, email and password fields intact', async () => {
+  it('renders one control per configured provider on both views without collecting credentials', async () => {
     const { createElement } = property23Modules.react;
-    const { cleanup, fireEvent, render, screen } = property23Modules.rtl;
+    const { cleanup, render, screen } = property23Modules.rtl;
     const AuthModal = property23Modules.authModal.default;
     const noop = () => {};
 
     await fc.assert(
       fc.asyncProperty(
         arbProviderConfigCase,
-        arbTypedCredentials,
-        async ({ raw, expected, absentNames }, typed) => {
+        async ({ raw, expected, absentNames }) => {
           // Requirement 3.1 names the signin view and the signup view, so every
           // assertion below is made on both.
           for (const mode of ['login', 'signup'] as const) {
@@ -1236,16 +1215,18 @@ describe('Identity_Provider controls mirror the Deployment_Configuration', () =>
                 ).toHaveLength(0);
               }
 
-              // The email and password fields stay present and accepting input —
-              // including, and especially, when zero providers are configured.
-              const emailField = screen.getByLabelText(/^Email/) as HTMLInputElement;
-              const passwordField = screen.getByLabelText(/^Password/) as HTMLInputElement;
-              expect(emailField).toBeEnabled();
-              expect(passwordField).toBeEnabled();
-              fireEvent.change(emailField, { target: { value: typed.email } });
-              fireEvent.change(passwordField, { target: { value: typed.password } });
-              expect(emailField.value).toBe(typed.email);
-              expect(passwordField.value).toBe(typed.password);
+              // Passwords never enter the application UI. The primary control
+              // sends the visitor to Cognito's managed authorization flow.
+              expect(screen.queryByLabelText(/password/i)).toBeNull();
+              const primaryLabel =
+                mode === 'signup' ? 'Continue to create account' : 'Continue with email';
+              expect(screen.getByRole('link', { name: primaryLabel })).toHaveAttribute(
+                'href',
+                `/api/auth/start?intent=${mode === 'signup' ? 'signup' : 'signin'}&returnTo=%2F`,
+              );
+              expect(
+                screen.getByText(/never receives or stores it/i),
+              ).toBeInTheDocument();
             } finally {
               cleanup();
               vi.unstubAllEnvs();

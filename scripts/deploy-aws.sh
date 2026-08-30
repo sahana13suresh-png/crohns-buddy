@@ -37,6 +37,21 @@ if [[ "${ACTUAL_ACCOUNT}" != "${ACCOUNT_ID}" ]]; then
   exit 1
 fi
 
+if command -v sam >/dev/null; then
+  echo "Validating the template against current CloudFormation resource schemas..."
+  sam validate \
+    --lint \
+    --template-file "${TEMPLATE_FILE}" \
+    --profile "${PROFILE}" \
+    --region "${REGION}"
+else
+  echo "Validating CloudFormation template syntax..."
+  aws cloudformation validate-template \
+    --profile "${PROFILE}" \
+    --region "${REGION}" \
+    --template-body "file://${TEMPLATE_FILE}" >/dev/null
+fi
+
 STACK_EXISTS='false'
 if aws cloudformation describe-stacks \
   --profile "${PROFILE}" \
@@ -68,13 +83,12 @@ append_parameter() {
   fi
 }
 
-append_parameter FirebaseApiKey NEXT_PUBLIC_FIREBASE_API_KEY
-append_parameter FirebaseAuthDomain NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN
-append_parameter FirebaseProjectId NEXT_PUBLIC_FIREBASE_PROJECT_ID
-append_parameter FirebaseStorageBucket NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET
-append_parameter FirebaseMessagingSenderId NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID
-append_parameter FirebaseAppId NEXT_PUBLIC_FIREBASE_APP_ID
-append_parameter AuthProviders NEXT_PUBLIC_AUTH_PROVIDERS
+append_parameter CustomDomainUrl CUSTOM_DOMAIN_URL
+append_parameter AmplifyProductionUrl AMPLIFY_PRODUCTION_URL
+append_parameter LocalDevelopmentUrl LOCAL_DEVELOPMENT_URL
+append_parameter CognitoDomainPrefix COGNITO_DOMAIN_PREFIX
+append_parameter GoogleClientId GOOGLE_OAUTH_CLIENT_ID
+append_parameter GoogleClientSecret GOOGLE_OAUTH_CLIENT_SECRET
 append_parameter PerspectiveApiKey PERSPECTIVE_API_KEY
 append_parameter BedrockModelId BEDROCK_MODEL_ID
 
@@ -149,6 +163,16 @@ PRODUCTION_URL="$(aws cloudformation describe-stacks \
   --stack-name "${STACK_NAME}" \
   --query "Stacks[0].Outputs[?OutputKey=='ProductionUrl'].OutputValue" \
   --output text)"
+USER_POOL_ID="$(aws cloudformation describe-stacks \
+  --profile "${PROFILE}" \
+  --region "${REGION}" \
+  --stack-name "${STACK_NAME}" \
+  --query "Stacks[0].Outputs[?OutputKey=='CognitoUserPoolId'].OutputValue" \
+  --output text)"
+
+echo "Verifying Cognito self-service signup..."
+AWS_PROFILE="${PROFILE}" AWS_REGION="${REGION}" \
+  node "${REPO_ROOT}/scripts/ensure-cognito-self-signup.mjs" "${USER_POOL_ID}"
 
 echo "Waiting for the Amplify production build..."
 JOB_ID=''

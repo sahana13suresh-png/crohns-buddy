@@ -14,7 +14,13 @@ export type CredentialGroup = 'AUTH_SERVICE' | 'AI_INFERENCE' | 'MEAL_PLAN_STORE
  * about the exact variable set without duplicating it.
  */
 export const REQUIRED: Record<CredentialGroup, string[]> = {
-  AUTH_SERVICE:    ['NEXT_PUBLIC_FIREBASE_API_KEY', 'NEXT_PUBLIC_FIREBASE_PROJECT_ID', 'NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN'],
+  AUTH_SERVICE: [
+    'COGNITO_AWS_REGION',
+    'COGNITO_USER_POOL_ID',
+    'COGNITO_CLIENT_ID',
+    'COGNITO_DOMAIN',
+    'AUTH_ALLOWED_ORIGINS',
+  ],
   // Bedrock accepts either AWS_BEARER_TOKEN_BEDROCK or credentials supplied by
   // the hosting platform's execution role. No static secret is mandatory.
   AI_INFERENCE:    [],
@@ -27,11 +33,41 @@ const MEAL_PLAN_ACCESS_KEY = 'MEAL_PLAN_AWS_ACCESS_KEY_ID';
 const MEAL_PLAN_SECRET_KEY = 'MEAL_PLAN_AWS_SECRET_ACCESS_KEY';
 
 /**
+ * Keep these as direct property reads. The production Next.js server build
+ * replaces them with server-only values because Amplify Hosting does not expose
+ * app environment variables to the SSR process at request time.
+ */
+function serverEnvValue(name: string): string | undefined {
+  switch (name) {
+    case 'AUTH_ALLOWED_ORIGINS':
+      return process.env.AUTH_ALLOWED_ORIGINS;
+    case 'COGNITO_AWS_REGION':
+      return process.env.COGNITO_AWS_REGION;
+    case 'COGNITO_CLIENT_ID':
+      return process.env.COGNITO_CLIENT_ID;
+    case 'COGNITO_DOMAIN':
+      return process.env.COGNITO_DOMAIN;
+    case 'COGNITO_USER_POOL_ID':
+      return process.env.COGNITO_USER_POOL_ID;
+    case 'MEAL_PLAN_AWS_ACCESS_KEY_ID':
+      return process.env.MEAL_PLAN_AWS_ACCESS_KEY_ID;
+    case 'MEAL_PLAN_AWS_REGION':
+      return process.env.MEAL_PLAN_AWS_REGION;
+    case 'MEAL_PLAN_AWS_SECRET_ACCESS_KEY':
+      return process.env.MEAL_PLAN_AWS_SECRET_ACCESS_KEY;
+    case 'MEAL_PLAN_TABLE_NAME':
+      return process.env.MEAL_PLAN_TABLE_NAME;
+    default:
+      return process.env[name];
+  }
+}
+
+/**
  * A variable is absent when it is unset or holds the empty string. An
  * empty-string value is never treated as a supplied credential.
  */
 function isAbsent(name: string): boolean {
-  const value = process.env[name];
+  const value = serverEnvValue(name);
   return value === undefined || value === '';
 }
 

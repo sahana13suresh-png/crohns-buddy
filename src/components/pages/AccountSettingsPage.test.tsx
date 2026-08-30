@@ -27,6 +27,7 @@ vi.mock('@/components/auth/SessionProvider', () => ({ useSession: mockUseSession
 // touchpoints are replaced, which is what keeps the Firebase SDK out of here;
 // the five destructive ports are injected instead.
 vi.mock('@/lib/auth', () => ({
+  isCognitoConfigured: () => true,
   getIdTokenForRequest: vi.fn(async () => 'token-1'),
   signOutEverywhere: vi.fn(async () => undefined),
   classifyAuthError: vi.fn(() => 'unknown'),

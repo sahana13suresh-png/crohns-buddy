@@ -477,14 +477,14 @@ export function reduceDeletion(context: DeletionContext, event: DeletionEvent): 
 
 // ─── Ports ─────────────────────────────────────────────────────────────────────
 
-/** What `removeAccount` observed, mapped off Firebase error codes. */
+/** What `removeAccount` observed, mapped from the account service response. */
 export type AccountRemovalOutcome = 'removed' | 'requires-recent-login' | 'failed';
 
 export type ReauthOutcome = 'succeeded' | 'failed' | 'cancelled';
 
 /**
  * The four destructive operations plus re-authentication, as an interface, so
- * the machine can be driven over fakes with no Firebase, no `fetch`, and no
+ * the machine can be driven over fakes with no Cognito, no `fetch`, and no
  * localStorage. Each is called by exactly one state.
  */
 export interface AccountDeletionPorts {
@@ -500,7 +500,7 @@ export interface AccountDeletionPorts {
   reauthenticate(password?: string): Promise<ReauthOutcome>;
 }
 
-/** The real ports: Firebase, the purge route, and localStorage. */
+/** The real ports: Cognito, the purge route, and localStorage. */
 export function createBrowserDeletionPorts(): AccountDeletionPorts {
   return {
     purgeRecords: () =>

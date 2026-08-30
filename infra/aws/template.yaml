@@ -1,5 +1,5 @@
 AWSTemplateFormatVersion: '2010-09-09'
-Description: Crohn's Buddy production hosting, data store, scheduled cleanup, and cost guardrail.
+Description: Crohn's Buddy production hosting, Cognito authentication, data store, scheduled cleanup, and cost guardrail.
 
 Parameters:
   DeployHosting:
@@ -25,27 +25,25 @@ Parameters:
   AlertEmail:
     Type: String
     Default: sahana13suresh@gmail.com
-  FirebaseApiKey:
+  CustomDomainUrl:
+    Type: String
+    Default: https://www.crohns-buddy.com
+  AmplifyProductionUrl:
+    Type: String
+    Default: https://main.d3cd4v50t3kv7.amplifyapp.com
+  LocalDevelopmentUrl:
+    Type: String
+    Default: http://127.0.0.1:3000
+  CognitoDomainPrefix:
+    Type: String
+    Default: crohns-buddy-853513360253
+    AllowedPattern: '^[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?$'
+  GoogleClientId:
+    Type: String
+    Default: ''
+  GoogleClientSecret:
     Type: String
     NoEcho: true
-    Default: ''
-  FirebaseAuthDomain:
-    Type: String
-    Default: ''
-  FirebaseProjectId:
-    Type: String
-    Default: ''
-  FirebaseStorageBucket:
-    Type: String
-    Default: ''
-  FirebaseMessagingSenderId:
-    Type: String
-    Default: ''
-  FirebaseAppId:
-    Type: String
-    Default: ''
-  AuthProviders:
-    Type: String
     Default: ''
   PerspectiveApiKey:
     Type: String
@@ -55,6 +53,9 @@ Parameters:
 Conditions:
   HostingEnabled: !Equals [!Ref DeployHosting, 'true']
   HasAlertEmail: !Not [!Equals [!Ref AlertEmail, '']]
+  HasGoogleProvider: !And
+    - !Not [!Equals [!Ref GoogleClientId, '']]
+    - !Not [!Equals [!Ref GoogleClientSecret, '']]
 
 Resources:
   SourceRepository:
@@ -90,6 +91,120 @@ Resources:
       Tags:
         - Key: application
           Value: crohns-buddy
+
+  UserPool:
+    Type: AWS::Cognito::UserPool
+    DeletionPolicy: Retain
+    UpdateReplacePolicy: Retain
+    Properties:
+      UserPoolName: crohns-buddy
+      DeletionProtection: ACTIVE
+      UserPoolTier: ESSENTIALS
+      UsernameAttributes:
+        - email
+      UsernameConfiguration:
+        CaseSensitive: false
+      AutoVerifiedAttributes:
+        - email
+      AccountRecoverySetting:
+        RecoveryMechanisms:
+          - Name: verified_email
+            Priority: 1
+      AdminCreateUserConfig:
+        AllowAdminCreateUserOnly: false
+      MfaConfiguration: OPTIONAL
+      EnabledMfas:
+        - SOFTWARE_TOKEN_MFA
+      Policies:
+        PasswordPolicy:
+          MinimumLength: 12
+          RequireLowercase: true
+          RequireNumbers: true
+          RequireSymbols: true
+          RequireUppercase: true
+          TemporaryPasswordValidityDays: 7
+      UserAttributeUpdateSettings:
+        AttributesRequireVerificationBeforeUpdate:
+          - email
+      VerificationMessageTemplate:
+        DefaultEmailOption: CONFIRM_WITH_CODE
+      EmailVerificationSubject: Verify your Crohn's Buddy account
+      EmailVerificationMessage: 'Your Crohn''s Buddy verification code is {####}.'
+      UserPoolTags:
+        application: crohns-buddy
+
+  CognitoDomain:
+    Type: AWS::Cognito::UserPoolDomain
+    Properties:
+      Domain: !Ref CognitoDomainPrefix
+      UserPoolId: !Ref UserPool
+      ManagedLoginVersion: 2
+
+  GoogleIdentityProvider:
+    Type: AWS::Cognito::UserPoolIdentityProvider
+    Condition: HasGoogleProvider
+    Properties:
+      ProviderName: Google
+      ProviderType: Google
+      UserPoolId: !Ref UserPool
+      ProviderDetails:
+        client_id: !Ref GoogleClientId
+        client_secret: !Ref GoogleClientSecret
+        authorize_scopes: openid email profile
+      AttributeMapping:
+        email: email
+        name: name
+        username: sub
+
+  UserPoolClient:
+    Type: AWS::Cognito::UserPoolClient
+    Properties:
+      ClientName: crohns-buddy-web
+      UserPoolId: !Ref UserPool
+      GenerateSecret: false
+      AllowedOAuthFlowsUserPoolClient: true
+      AllowedOAuthFlows:
+        - code
+      AllowedOAuthScopes:
+        - openid
+        - email
+        - profile
+        - aws.cognito.signin.user.admin
+      CallbackURLs:
+        - !Sub ${CustomDomainUrl}/api/auth/callback
+        - !Sub ${AmplifyProductionUrl}/api/auth/callback
+        - !Sub ${LocalDevelopmentUrl}/api/auth/callback
+      LogoutURLs:
+        - !Sub ${CustomDomainUrl}/
+        - !Sub ${AmplifyProductionUrl}/
+        - !Sub ${LocalDevelopmentUrl}/
+      SupportedIdentityProviders:
+        - COGNITO
+        - !If [HasGoogleProvider, !Ref GoogleIdentityProvider, !Ref 'AWS::NoValue']
+      PreventUserExistenceErrors: ENABLED
+      EnableTokenRevocation: true
+      AccessTokenValidity: 60
+      IdTokenValidity: 60
+      RefreshTokenValidity: 30
+      TokenValidityUnits:
+        AccessToken: minutes
+        IdToken: minutes
+        RefreshToken: days
+      RefreshTokenRotation:
+        Feature: ENABLED
+        RetryGracePeriodSeconds: 10
+      AuthSessionValidity: 3
+      ExplicitAuthFlows:
+        - ALLOW_USER_SRP_AUTH
+        - ALLOW_USER_AUTH
+
+  ManagedLoginBranding:
+    Type: AWS::Cognito::ManagedLoginBranding
+    DependsOn: CognitoDomain
+    Properties:
+      UserPoolId: !Ref UserPool
+      ClientId: !Ref UserPoolClient
+      UseCognitoProvidedValues: true
 
   AmplifyServiceRole:
     Type: AWS::IAM::Role
@@ -189,7 +304,7 @@ Resources:
             preBuild:
               commands:
                 - npm ci
-                - env | grep -E '^(MEAL_PLAN_TABLE_NAME|MEAL_PLAN_AWS_REGION|BEDROCK_MODEL_ID|CRON_SECRET|PERSPECTIVE_API_KEY|NEXT_PUBLIC_FIREBASE_|NEXT_PUBLIC_AUTH_PROVIDERS)=' >> .env.production
+                - env | grep -E '^(MEAL_PLAN_TABLE_NAME|MEAL_PLAN_AWS_REGION|BEDROCK_MODEL_ID|CRON_SECRET|PERSPECTIVE_API_KEY|NEXT_PUBLIC_AUTH_|COGNITO_|AUTH_ALLOWED_ORIGINS|AUTH_SOCIAL_PROVIDERS)=' >> .env.production
             build:
               commands:
                 - npm run build
@@ -212,20 +327,26 @@ Resources:
           Value: !Ref CronSecret
         - Name: PERSPECTIVE_API_KEY
           Value: !Ref PerspectiveApiKey
-        - Name: NEXT_PUBLIC_FIREBASE_API_KEY
-          Value: !Ref FirebaseApiKey
-        - Name: NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN
-          Value: !Ref FirebaseAuthDomain
-        - Name: NEXT_PUBLIC_FIREBASE_PROJECT_ID
-          Value: !Ref FirebaseProjectId
-        - Name: NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET
-          Value: !Ref FirebaseStorageBucket
-        - Name: NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID
-          Value: !Ref FirebaseMessagingSenderId
-        - Name: NEXT_PUBLIC_FIREBASE_APP_ID
-          Value: !Ref FirebaseAppId
+        - Name: NEXT_PUBLIC_AUTH_ENABLED
+          Value: 'true'
         - Name: NEXT_PUBLIC_AUTH_PROVIDERS
-          Value: !Ref AuthProviders
+          Value: !If [HasGoogleProvider, google, '']
+        - Name: COGNITO_AWS_REGION
+          Value: !Ref AWS::Region
+        - Name: COGNITO_USER_POOL_ID
+          Value: !Ref UserPool
+        - Name: COGNITO_CLIENT_ID
+          Value: !Ref UserPoolClient
+        - Name: COGNITO_DOMAIN
+          Value: !Sub https://${CognitoDomainPrefix}.auth.${AWS::Region}.amazoncognito.com
+        - Name: AUTH_ALLOWED_ORIGINS
+          Value: !Join
+            - ','
+            - - !Ref CustomDomainUrl
+              - !Ref AmplifyProductionUrl
+              - !Ref LocalDevelopmentUrl
+        - Name: AUTH_SOCIAL_PROVIDERS
+          Value: !If [HasGoogleProvider, Google, '']
       Tags:
         - Key: application
           Value: crohns-buddy
@@ -339,3 +460,11 @@ Outputs:
   ProductionUrl:
     Condition: HostingEnabled
     Value: !Sub https://main.${AmplifyApp.DefaultDomain}
+  CognitoUserPoolId:
+    Value: !Ref UserPool
+  CognitoUserPoolClientId:
+    Value: !Ref UserPoolClient
+  CognitoManagedLoginUrl:
+    Value: !Sub https://${CognitoDomainPrefix}.auth.${AWS::Region}.amazoncognito.com
+  GoogleSocialLoginStatus:
+    Value: !If [HasGoogleProvider, ENABLED, AWAITING_PROVIDER_CREDENTIALS]

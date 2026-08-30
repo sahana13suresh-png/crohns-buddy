@@ -1,6 +1,35 @@
+const SERVER_RUNTIME_ENV_KEYS = [
+  'AUTH_ALLOWED_ORIGINS',
+  'AUTH_SOCIAL_PROVIDERS',
+  'AWS_BEARER_TOKEN_BEDROCK',
+  'BEDROCK_MODEL_ID',
+  'COGNITO_AWS_REGION',
+  'COGNITO_CLIENT_ID',
+  'COGNITO_DOMAIN',
+  'COGNITO_USER_POOL_ID',
+  'CRON_SECRET',
+  'MEAL_PLAN_AWS_ACCESS_KEY_ID',
+  'MEAL_PLAN_AWS_REGION',
+  'MEAL_PLAN_AWS_SECRET_ACCESS_KEY',
+  'MEAL_PLAN_TABLE_NAME',
+  'PERSPECTIVE_API_KEY',
+];
+
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   outputFileTracingRoot: process.cwd(),
+  webpack(config, { isServer, webpack }) {
+    if (isServer) {
+      const definitions = Object.fromEntries(
+        SERVER_RUNTIME_ENV_KEYS.map((name) => [
+          `process.env.${name}`,
+          JSON.stringify(process.env[name] ?? ''),
+        ]),
+      );
+      config.plugins.push(new webpack.DefinePlugin(definitions));
+    }
+    return config;
+  },
   async headers() {
     return [
       {

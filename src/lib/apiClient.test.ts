@@ -7,17 +7,16 @@ import {
   SESSION_EXPIRED_MESSAGE,
   type ApiFailureKind,
 } from './apiClient';
-import { getIdTokenForRequest, signOutEverywhere } from './auth';
+import { fetchAuthSession, signOutEverywhere } from './auth';
 
-// `callApi` reads the Auth_Token and discards the Session through `auth.ts`.
-// Those are the only two imports, so the module is replaced wholesale: the real
-// one would pull in the Firebase SDK for no benefit here.
+// `callApi` asks the server to refresh a refused cookie session and discards the
+// Session after a final refusal. Those are the only auth touchpoints here.
 vi.mock('./auth', () => ({
-  getIdTokenForRequest: vi.fn(async () => null),
+  fetchAuthSession: vi.fn(async () => null),
   signOutEverywhere: vi.fn(async () => undefined),
 }));
 
-const mockGetIdToken = vi.mocked(getIdTokenForRequest);
+const mockFetchAuthSession = vi.mocked(fetchAuthSession);
 const mockSignOutEverywhere = vi.mocked(signOutEverywhere);
 
 function jsonResponse(status: number, body: unknown): Response {
@@ -56,8 +55,8 @@ function stubHangingFetch() {
 }
 
 beforeEach(() => {
-  mockGetIdToken.mockReset();
-  mockGetIdToken.mockResolvedValue(null);
+  mockFetchAuthSession.mockReset();
+  mockFetchAuthSession.mockResolvedValue(null);
   mockSignOutEverywhere.mockReset();
   mockSignOutEverywhere.mockResolvedValue(undefined);
 });
@@ -166,18 +165,6 @@ describe('callApi status mapping', () => {
     expect(result).toMatchObject({ ok: false, kind: 'unavailable' });
   });
 
-  it('reports unavailable when the Auth_Token read throws outright', async () => {
-    // The request never left, which says nothing about the Session's validity,
-    // so this is retryable rather than a credential refusal.
-    mockGetIdToken.mockRejectedValue(new Error('token store unreachable'));
-    const fetchSpy = stubFetch(() => jsonResponse(200, {}));
-
-    const result = await callApi('/api/meal-plans');
-
-    expect(result).toMatchObject({ ok: false, kind: 'unavailable' });
-    expect(fetchSpy).not.toHaveBeenCalled();
-  });
-
   it('resolves a 204 to a success with no data', async () => {
     stubFetch(() => new Response(null, { status: 204 }));
 
@@ -221,28 +208,17 @@ describe('callApi timeout', () => {
 // ─── Headers ───────────────────────────────────────────────────────────────────
 
 describe('callApi headers', () => {
-  it('attaches the Auth_Token from getIdTokenForRequest', async () => {
-    mockGetIdToken.mockResolvedValue('token-abc');
-    const fetchSpy = stubFetch(() => jsonResponse(200, {}));
-
-    await callApi('/api/meal-plans');
-
-    const headers = headersOf(fetchSpy);
-    expect(headers.get('Authorization')).toBe('Bearer token-abc');
-  });
-
-  it('sends no Authorization header when there is no Session', async () => {
-    mockGetIdToken.mockResolvedValue(null);
+  it('uses same-origin cookies without exposing an Authorization token', async () => {
     const fetchSpy = stubFetch(() => jsonResponse(200, {}));
 
     await callApi('/api/meal-plans');
 
     const headers = headersOf(fetchSpy);
     expect(headers.has('Authorization')).toBe(false);
+    expect(fetchSpy.mock.calls[0]?.[1]?.credentials).toBe('same-origin');
   });
 
   it('never overwrites an Authorization header the caller supplied', async () => {
-    mockGetIdToken.mockResolvedValue('token-abc');
     const fetchSpy = stubFetch(() => jsonResponse(200, {}));
 
     await callApi('/api/internal/pending-deletion-sweep', {
@@ -252,7 +228,7 @@ describe('callApi headers', () => {
 
     const headers = headersOf(fetchSpy);
     expect(headers.get('Authorization')).toBe('Bearer cron-secret');
-    expect(mockGetIdToken).not.toHaveBeenCalled();
+    expect(mockFetchAuthSession).not.toHaveBeenCalled();
   });
 
   it('sets a JSON content type when a body is present and none was given', async () => {

@@ -24,7 +24,7 @@ import {
 
 /**
  * These tests cover the parts of the Auth_Service module that do not need a
- * live Firebase project: error-code classification and the unconfigured path.
+ * live Cognito deployment: error-code classification and the unconfigured path.
  */
 
 describe('getAuthErrorCode', () => {
@@ -75,7 +75,7 @@ describe('classifyAuthError', () => {
     expect(kinds).toEqual(new Set<AuthErrorKind>(['invalid-credentials']));
   });
 
-  it('reports a missing Firebase configuration as not-configured', () => {
+  it('reports a missing identity-service configuration as not-configured', () => {
     expect(classifyAuthError(new Error('Firebase is not configured.'))).toBe('not-configured');
     expect(classifyAuthError(new FirebaseError('auth/invalid-api-key', 'bad key'))).toBe(
       'not-configured'
@@ -87,9 +87,9 @@ describe('classifyAuthError', () => {
   });
 });
 
-describe('with no Firebase configuration present', () => {
+describe('with no Cognito configuration present', () => {
   beforeEach(() => {
-    vi.stubEnv('NEXT_PUBLIC_FIREBASE_API_KEY', undefined);
+    vi.stubEnv('NEXT_PUBLIC_AUTH_ENABLED', undefined);
   });
 
   afterEach(() => {

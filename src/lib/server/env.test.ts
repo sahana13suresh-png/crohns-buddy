@@ -50,7 +50,7 @@ describe('assertServerEnv', () => {
   });
 
   it('names every group that has a missing variable', () => {
-    delete process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID;
+    delete process.env.COGNITO_USER_POOL_ID;
     delete process.env.MEAL_PLAN_TABLE_NAME;
 
     let message = '';
