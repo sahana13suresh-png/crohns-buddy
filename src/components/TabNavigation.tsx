@@ -2,7 +2,14 @@
 
 import { useRef, useCallback, KeyboardEvent } from 'react';
 
-export type TabId = 'welcome' | 'about' | 'tracker' | 'planner' | 'resources' | 'contact';
+export type TabId =
+  | 'welcome'
+  | 'about'
+  | 'tracker'
+  | 'planner'
+  | 'resources'
+  | 'contact'
+  | 'account';
 
 export interface Tab {
   id: TabId;
@@ -16,6 +23,7 @@ export const TABS: Tab[] = [
   { id: 'planner', label: 'AI Meal Planner' },
   { id: 'resources', label: 'Resources' },
   { id: 'contact', label: 'Contact Us' },
+  { id: 'account', label: 'Account' },
 ];
 
 export interface TabNavigationProps {

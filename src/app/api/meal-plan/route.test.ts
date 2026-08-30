@@ -1,7 +1,23 @@
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { POST } from './route';
+/**
+ * Tests for `POST /api/meal-plan`, the unauthenticated generation endpoint.
+ *
+ * Two things are covered here. First, module evaluation supports either a Bedrock
+ * API key or an AWS execution role. Second, the generation behavior over a mocked
+ * Bedrock Converse endpoint: the
+ * route carries no Session and reads no identity, because generating a Meal_Plan is
+ * available to a visitor who is not signed in (Requirements 5.12, 6.10).
+ */
 
-// Mock quiz answers for testing
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+
+const BEDROCK_TOKEN = 'test-bedrock-token';
+
+/** Fresh module evaluation per load, so the module-scope assertion is observable. */
+async function loadRoute(): Promise<typeof import('./route')> {
+  vi.resetModules();
+  return import('./route');
+}
+
 const validQuizAnswers = {
   section1_crohnsStatus: {
     flareStatus: 'remission' as const,
@@ -77,234 +93,139 @@ function createRequest(body: unknown): Request {
   });
 }
 
-describe('/api/meal-plan', () => {
-  const originalEnv = process.env;
+/** A Bedrock Converse success envelope carrying `text` as the model's single content block. */
+function converseResponse(text: string): Response {
+  return new Response(
+    JSON.stringify({ output: { message: { content: [{ text }] } } }),
+    { status: 200 }
+  );
+}
 
-  beforeEach(() => {
-    process.env = { ...originalEnv, OPENAI_API_KEY: 'test-key-123' };
-    vi.restoreAllMocks();
+/** Posts `body` through a freshly evaluated route module. */
+async function post(body: unknown): Promise<Response> {
+  const { POST } = await loadRoute();
+  return POST(createRequest(body));
+}
+
+beforeEach(() => {
+  vi.stubEnv('AWS_BEARER_TOKEN_BEDROCK', BEDROCK_TOKEN);
+  vi.stubEnv('AWS_REGION', 'us-east-1');
+  vi.stubEnv('BEDROCK_MODEL_ID', 'us.anthropic.claude-sonnet-4-6');
+  // The Bedrock adapter logs the status and body of a non-ok response; the error-path tests
+  // exercise that deliberately, so the output is suppressed rather than printed.
+  vi.spyOn(console, 'error').mockImplementation(() => {});
+});
+
+afterEach(() => {
+  vi.unstubAllEnvs();
+  vi.restoreAllMocks();
+});
+
+describe('startup credential validation', () => {
+  it('supports execution-role authentication when the Bedrock token is unset', async () => {
+    vi.stubEnv('AWS_BEARER_TOKEN_BEDROCK', undefined);
+
+    const { POST } = await loadRoute();
+    expect(typeof POST).toBe('function');
   });
 
-  afterEach(() => {
-    process.env = originalEnv;
+  it('treats an empty Bedrock token as execution-role mode', async () => {
+    vi.stubEnv('AWS_BEARER_TOKEN_BEDROCK', '');
+
+    const { POST } = await loadRoute();
+    expect(typeof POST).toBe('function');
   });
 
-  it('returns error when OPENAI_API_KEY is not set', async () => {
-    delete process.env.OPENAI_API_KEY;
-    const req = createRequest({ quizAnswers: validQuizAnswers });
-    const res = await POST(req);
-    const data = await res.json();
+  it('evaluates and exports POST when the credential group is complete', async () => {
+    const { POST } = await loadRoute();
 
-    expect(res.status).toBe(500);
-    expect(data.success).toBe(false);
-    expect(data.error).toContain('not configured');
+    expect(typeof POST).toBe('function');
   });
+});
 
-  it('returns error for invalid JSON body', async () => {
-    const req = new Request('http://localhost:3000/api/meal-plan', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: 'not valid json{{{',
-    });
-    const res = await POST(req);
-    const data = await res.json();
+describe('POST /api/meal-plan', () => {
+  it('returns a structured meal plan, calling the Bedrock Converse endpoint with bearer auth', async () => {
+    const fetchSpy = vi
+      .spyOn(globalThis, 'fetch')
+      .mockResolvedValueOnce(converseResponse(validMealPlanJSON));
 
-    expect(res.status).toBe(400);
-    expect(data.success).toBe(false);
-    expect(data.error).toContain('Invalid request body');
-  });
-
-  it('returns error when quizAnswers is missing', async () => {
-    const req = createRequest({});
-    const res = await POST(req);
-    const data = await res.json();
-
-    expect(res.status).toBe(400);
-    expect(data.success).toBe(false);
-    expect(data.error).toContain('Quiz answers are required');
-  });
-
-  it('returns a structured meal plan on successful OpenAI response', async () => {
-    const mockFetch = vi.spyOn(globalThis, 'fetch').mockResolvedValueOnce(
-      new Response(
-        JSON.stringify({
-          choices: [{ message: { content: validMealPlanJSON } }],
-        }),
-        { status: 200 }
-      )
-    );
-
-    const req = createRequest({ quizAnswers: validQuizAnswers });
-    const res = await POST(req);
+    const res = await post({ quizAnswers: validQuizAnswers });
     const data = await res.json();
 
     expect(res.status).toBe(200);
     expect(data.success).toBe(true);
-    expect(data.mealPlan).toBeDefined();
     expect(data.mealPlan.meals).toHaveLength(3);
     expect(data.mealPlan.meals[0].mealName).toBe('Breakfast');
-    expect(data.mealPlan.meals[0].items[0].name).toBe('Oatmeal');
-    expect(data.mealPlan.meals[0].items[0].portion).toBe('1 cup');
-    expect(data.mealPlan.meals[0].items[0].notes).toBe('Cooked with water');
+    expect(data.mealPlan.meals[0].items[0]).toEqual({
+      name: 'Oatmeal',
+      portion: '1 cup',
+      notes: 'Cooked with water',
+    });
     expect(data.mealPlan.summary).toBe('A gentle, low-fiber meal plan focused on safe foods.');
     expect(data.mealPlan.warnings).toEqual(['Avoid peanuts due to allergy.']);
 
-    // Verify the fetch was called with correct parameters
-    expect(mockFetch).toHaveBeenCalledWith(
-      'https://api.openai.com/v1/chat/completions',
+    expect(fetchSpy).toHaveBeenCalledWith(
+      'https://bedrock-runtime.us-east-1.amazonaws.com/model/us.anthropic.claude-sonnet-4-6/converse',
       expect.objectContaining({
         method: 'POST',
         headers: expect.objectContaining({
-          'Authorization': 'Bearer test-key-123',
+          Authorization: `Bearer ${BEDROCK_TOKEN}`,
           'Content-Type': 'application/json',
         }),
       })
     );
   });
 
-  it('handles meal plan JSON wrapped in code fences', async () => {
-    vi.spyOn(globalThis, 'fetch').mockResolvedValueOnce(
-      new Response(
-        JSON.stringify({
-          choices: [{ message: { content: '```json\n' + validMealPlanJSON + '\n```' } }],
-        }),
-        { status: 200 }
-      )
+  it('generates for a caller carrying no Session', async () => {
+    vi.spyOn(globalThis, 'fetch').mockResolvedValueOnce(converseResponse(validMealPlanJSON));
+    const { POST } = await loadRoute();
+
+    // No Authorization header, no cookie: generation is open to an unauthenticated visitor.
+    const res = await POST(
+      new Request('http://localhost:3000/api/meal-plan', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ quizAnswers: validQuizAnswers }),
+      })
     );
 
-    const req = createRequest({ quizAnswers: validQuizAnswers });
-    const res = await POST(req);
+    expect(res.status).toBe(200);
+    expect((await res.json()).success).toBe(true);
+  });
+
+  it('handles meal plan JSON wrapped in code fences', async () => {
+    vi.spyOn(globalThis, 'fetch').mockResolvedValueOnce(
+      converseResponse('```json\n' + validMealPlanJSON + '\n```')
+    );
+
+    const res = await post({ quizAnswers: validQuizAnswers });
     const data = await res.json();
 
     expect(res.status).toBe(200);
-    expect(data.success).toBe(true);
     expect(data.mealPlan.meals).toHaveLength(3);
   });
 
-  it('returns timeout error when request takes too long', async () => {
-    vi.spyOn(globalThis, 'fetch').mockImplementationOnce(() => {
-      const error = new Error('The operation was aborted');
-      error.name = 'AbortError';
-      return Promise.reject(error);
-    });
-
-    const req = createRequest({ quizAnswers: validQuizAnswers });
-    const res = await POST(req);
-    const data = await res.json();
-
-    expect(res.status).toBe(504);
-    expect(data.success).toBe(false);
-    expect(data.error).toBe('The AI service is taking too long. Please try again.');
-  });
-
-  it('returns rate limit error on 429 response', async () => {
-    vi.spyOn(globalThis, 'fetch').mockResolvedValueOnce(
-      new Response(JSON.stringify({ error: { message: 'Rate limit exceeded' } }), { status: 429 })
-    );
-
-    const req = createRequest({ quizAnswers: validQuizAnswers });
-    const res = await POST(req);
-    const data = await res.json();
-
-    expect(res.status).toBe(429);
-    expect(data.success).toBe(false);
-    expect(data.error).toBe('The service is busy. Please wait a moment and try again.');
-  });
-
-  it('returns server error on 5xx response', async () => {
-    vi.spyOn(globalThis, 'fetch').mockResolvedValueOnce(
-      new Response(JSON.stringify({ error: { message: 'Internal error' } }), { status: 500 })
-    );
-
-    const req = createRequest({ quizAnswers: validQuizAnswers });
-    const res = await POST(req);
-    const data = await res.json();
-
-    expect(res.status).toBe(502);
-    expect(data.success).toBe(false);
-    expect(data.error).toBe('The AI service is temporarily unavailable. Please try again later.');
-  });
-
-  it('returns malformed response error when AI returns invalid JSON', async () => {
-    vi.spyOn(globalThis, 'fetch').mockResolvedValueOnce(
-      new Response(
-        JSON.stringify({
-          choices: [{ message: { content: 'This is not JSON at all' } }],
-        }),
-        { status: 200 }
-      )
-    );
-
-    const req = createRequest({ quizAnswers: validQuizAnswers });
-    const res = await POST(req);
-    const data = await res.json();
-
-    expect(res.status).toBe(502);
-    expect(data.success).toBe(false);
-    expect(data.error).toBe('We received an unexpected response. Please try again.');
-  });
-
-  it('returns malformed response error when AI returns incomplete meal plan', async () => {
-    vi.spyOn(globalThis, 'fetch').mockResolvedValueOnce(
-      new Response(
-        JSON.stringify({
-          choices: [{ message: { content: JSON.stringify({ meals: [] }) } }],
-        }),
-        { status: 200 }
-      )
-    );
-
-    const req = createRequest({ quizAnswers: validQuizAnswers });
-    const res = await POST(req);
-    const data = await res.json();
-
-    expect(res.status).toBe(502);
-    expect(data.success).toBe(false);
-    expect(data.error).toBe('We received an unexpected response. Please try again.');
-  });
-
-  it('returns malformed response error when OpenAI response has no choices', async () => {
-    vi.spyOn(globalThis, 'fetch').mockResolvedValueOnce(
-      new Response(JSON.stringify({ choices: [] }), { status: 200 })
-    );
-
-    const req = createRequest({ quizAnswers: validQuizAnswers });
-    const res = await POST(req);
-    const data = await res.json();
-
-    expect(res.status).toBe(502);
-    expect(data.success).toBe(false);
-    expect(data.error).toBe('We received an unexpected response. Please try again.');
-  });
-
-  it('includes all quiz answer sections in the OpenAI request', async () => {
+  it('sends every quiz answer section in the Converse request', async () => {
     let capturedBody: string | undefined;
     vi.spyOn(globalThis, 'fetch').mockImplementationOnce(async (_url, options) => {
       capturedBody = options?.body as string;
-      return new Response(
-        JSON.stringify({
-          choices: [{ message: { content: validMealPlanJSON } }],
-        }),
-        { status: 200 }
-      );
+      return converseResponse(validMealPlanJSON);
     });
 
-    const req = createRequest({ quizAnswers: validQuizAnswers });
-    await POST(req);
+    await post({ quizAnswers: validQuizAnswers });
 
     expect(capturedBody).toBeDefined();
-    const parsedBody = JSON.parse(capturedBody!);
-    const userMessage = parsedBody.messages[1].content;
+    const parsed = JSON.parse(capturedBody!);
+    const userMessage = parsed.messages[0].content[0].text;
 
-    // Verify all sections are included in the prompt
-    expect(userMessage).toContain('Section 1: Current Crohn\'s Status');
+    expect(parsed.system[0].text).toContain('nutrition assistant');
+    expect(parsed.inferenceConfig).toEqual({ maxTokens: 8000, temperature: 0.7 });
+    expect(userMessage).toContain("Section 1: Current Crohn's Status");
     expect(userMessage).toContain('Section 2: Medical Safety');
     expect(userMessage).toContain('Section 3: Food Tolerance');
     expect(userMessage).toContain('Section 4: Food Preferences');
     expect(userMessage).toContain('Section 5: Lifestyle');
     expect(userMessage).toContain('Section 6: Output Preferences');
-
-    // Verify specific answers are included
     expect(userMessage).toContain('remission');
     expect(userMessage).toContain('Mild fatigue');
     expect(userMessage).toContain('peanuts');
@@ -312,15 +233,134 @@ describe('/api/meal-plan', () => {
     expect(userMessage).toContain('College student on a budget');
   });
 
-  it('handles network error gracefully', async () => {
-    vi.spyOn(globalThis, 'fetch').mockRejectedValueOnce(new Error('Network error'));
+  it('rejects an unparseable body as 400 without calling Bedrock', async () => {
+    const fetchSpy = vi.spyOn(globalThis, 'fetch');
+    const { POST } = await loadRoute();
 
-    const req = createRequest({ quizAnswers: validQuizAnswers });
-    const res = await POST(req);
+    const res = await POST(
+      new Request('http://localhost:3000/api/meal-plan', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: 'not valid json{{{',
+      })
+    );
+    const data = await res.json();
+
+    expect(res.status).toBe(400);
+    expect(data.success).toBe(false);
+    expect(data.error).toContain('Invalid request body');
+    expect(fetchSpy).not.toHaveBeenCalled();
+  });
+
+  it('rejects a missing quizAnswers as 400 without calling Bedrock', async () => {
+    const fetchSpy = vi.spyOn(globalThis, 'fetch');
+
+    const res = await post({});
+    const data = await res.json();
+
+    expect(res.status).toBe(400);
+    expect(data.error).toContain('Quiz answers are required');
+    expect(fetchSpy).not.toHaveBeenCalled();
+  });
+
+  it('maps a throttled Bedrock response to 429', async () => {
+    vi.spyOn(globalThis, 'fetch').mockResolvedValueOnce(
+      new Response(JSON.stringify({ message: 'Too many requests' }), { status: 429 })
+    );
+
+    const res = await post({ quizAnswers: validQuizAnswers });
+    const data = await res.json();
+
+    expect(res.status).toBe(429);
+    expect(data.error).toBe('The service is busy. Please wait a moment and try again.');
+  });
+
+  it('maps a Bedrock server error to 502', async () => {
+    vi.spyOn(globalThis, 'fetch').mockResolvedValueOnce(
+      new Response(JSON.stringify({ message: 'Internal error' }), { status: 500 })
+    );
+
+    const res = await post({ quizAnswers: validQuizAnswers });
     const data = await res.json();
 
     expect(res.status).toBe(502);
-    expect(data.success).toBe(false);
     expect(data.error).toBe('The AI service is temporarily unavailable. Please try again later.');
+  });
+
+  it('maps a request timeout to 502', async () => {
+    vi.spyOn(globalThis, 'fetch').mockImplementationOnce(() => {
+      const error = new Error('The operation was aborted');
+      error.name = 'AbortError';
+      return Promise.reject(error);
+    });
+
+    const res = await post({ quizAnswers: validQuizAnswers });
+    const data = await res.json();
+
+    expect(res.status).toBe(502);
+    expect(data.error).toBe('The AI service is temporarily unavailable. Please try again later.');
+  });
+
+  it('maps a network failure to 502', async () => {
+    vi.spyOn(globalThis, 'fetch').mockRejectedValueOnce(new Error('Network error'));
+
+    const res = await post({ quizAnswers: validQuizAnswers });
+    const data = await res.json();
+
+    expect(res.status).toBe(502);
+    expect(data.error).toBe('The AI service is temporarily unavailable. Please try again later.');
+  });
+
+  it('maps a Converse envelope with no content block to 502', async () => {
+    vi.spyOn(globalThis, 'fetch').mockResolvedValueOnce(
+      new Response(JSON.stringify({ output: { message: { content: [] } } }), { status: 200 })
+    );
+
+    const res = await post({ quizAnswers: validQuizAnswers });
+    const data = await res.json();
+
+    expect(res.status).toBe(502);
+    expect(data.error).toBe('The AI service is temporarily unavailable. Please try again later.');
+  });
+
+  it('rejects model output that is not JSON as 502', async () => {
+    vi.spyOn(globalThis, 'fetch').mockResolvedValueOnce(
+      converseResponse('This is not JSON at all')
+    );
+
+    const res = await post({ quizAnswers: validQuizAnswers });
+    const data = await res.json();
+
+    expect(res.status).toBe(502);
+    expect(data.error).toBe('We received an unexpected response. Please try again.');
+  });
+
+  it('rejects a plan carrying no meals as 502', async () => {
+    vi.spyOn(globalThis, 'fetch').mockResolvedValueOnce(
+      converseResponse(JSON.stringify({ meals: [], summary: 'Empty' }))
+    );
+
+    const res = await post({ quizAnswers: validQuizAnswers });
+    const data = await res.json();
+
+    expect(res.status).toBe(502);
+    expect(data.error).toBe('We received an unexpected response. Please try again.');
+  });
+
+  it('rejects a meal item missing its portion as 502', async () => {
+    vi.spyOn(globalThis, 'fetch').mockResolvedValueOnce(
+      converseResponse(
+        JSON.stringify({
+          meals: [{ mealName: 'Breakfast', items: [{ name: 'Oatmeal' }] }],
+          summary: 'Missing a portion',
+        })
+      )
+    );
+
+    const res = await post({ quizAnswers: validQuizAnswers });
+    const data = await res.json();
+
+    expect(res.status).toBe(502);
+    expect(data.error).toBe('We received an unexpected response. Please try again.');
   });
 });

@@ -22,14 +22,6 @@ export async function POST(request: NextRequest): Promise<NextResponse<ChatRespo
       );
     }
 
-    if (!process.env.AWS_BEARER_TOKEN_BEDROCK) {
-      console.error('AWS_BEARER_TOKEN_BEDROCK is not configured');
-      return NextResponse.json(
-        { success: false, error: 'The AI service is not configured. Please contact support.' },
-        { status: 500 }
-      );
-    }
-
     // Build the system prompt with meal plan context
     const systemPrompt = buildSystemPrompt(currentMealPlan);
 
@@ -53,8 +45,6 @@ export async function POST(request: NextRequest): Promise<NextResponse<ChatRespo
 
       return NextResponse.json({ success: true, reply });
     } catch (error: unknown) {
-      console.error('Bedrock API error:', error);
-
       if (error instanceof Error && error.name === 'ThrottlingException') {
         return NextResponse.json(
           { success: false, error: 'The service is busy. Please wait a moment and try again.' },
@@ -67,8 +57,7 @@ export async function POST(request: NextRequest): Promise<NextResponse<ChatRespo
         { status: 502 }
       );
     }
-  } catch (error: unknown) {
-    console.error('Chat API error:', error);
+  } catch {
     return NextResponse.json(
       { success: false, error: 'An unexpected error occurred. Please try again.' },
       { status: 500 }

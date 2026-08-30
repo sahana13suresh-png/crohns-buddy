@@ -9,27 +9,27 @@ describe('TabNavigation', () => {
     onTabChange: vi.fn(),
   };
 
-  it('renders all 5 tabs in correct order', () => {
+  it('renders every tab from TABS in order', () => {
     render(<TabNavigation {...defaultProps} />);
 
     const tabs = screen.getAllByRole('tab');
-    expect(tabs).toHaveLength(5);
-    expect(tabs[0]).toHaveTextContent('Welcome');
-    expect(tabs[1]).toHaveTextContent("About Crohn's");
-    expect(tabs[2]).toHaveTextContent('Symptom Tracker');
-    expect(tabs[3]).toHaveTextContent('AI Meal Planner');
-    expect(tabs[4]).toHaveTextContent('Resources');
+    expect(tabs).toHaveLength(TABS.length);
+    TABS.forEach((tab, index) => {
+      expect(tabs[index]).toHaveTextContent(tab.label);
+    });
   });
 
   it('marks the active tab with aria-selected=true', () => {
+    const activeIndex = TABS.findIndex((tab) => tab.id === 'tracker');
     render(<TabNavigation {...defaultProps} activeTab="tracker" />);
 
     const tabs = screen.getAllByRole('tab');
-    expect(tabs[2]).toHaveAttribute('aria-selected', 'true');
-    expect(tabs[0]).toHaveAttribute('aria-selected', 'false');
-    expect(tabs[1]).toHaveAttribute('aria-selected', 'false');
-    expect(tabs[3]).toHaveAttribute('aria-selected', 'false');
-    expect(tabs[4]).toHaveAttribute('aria-selected', 'false');
+    TABS.forEach((_, index) => {
+      expect(tabs[index]).toHaveAttribute(
+        'aria-selected',
+        index === activeIndex ? 'true' : 'false'
+      );
+    });
   });
 
   it('sets Welcome as default active tab', () => {
@@ -92,10 +92,11 @@ describe('TabNavigation', () => {
 
   it('wraps focus from last tab to first on ArrowRight', async () => {
     const user = userEvent.setup();
-    render(<TabNavigation activeTab="resources" onTabChange={vi.fn()} />);
+    const lastIndex = TABS.length - 1;
+    render(<TabNavigation activeTab={TABS[lastIndex].id} onTabChange={vi.fn()} />);
 
     const tabs = screen.getAllByRole('tab');
-    tabs[4].focus();
+    tabs[lastIndex].focus();
     await user.keyboard('{ArrowRight}');
     expect(tabs[0]).toHaveFocus();
   });
@@ -107,18 +108,20 @@ describe('TabNavigation', () => {
     const tabs = screen.getAllByRole('tab');
     tabs[0].focus();
     await user.keyboard('{ArrowLeft}');
-    expect(tabs[4]).toHaveFocus();
+    expect(tabs[TABS.length - 1]).toHaveFocus();
   });
 
   it('sets tabIndex=0 on active tab and tabIndex=-1 on inactive tabs', () => {
+    const activeIndex = TABS.findIndex((tab) => tab.id === 'planner');
     render(<TabNavigation activeTab="planner" onTabChange={vi.fn()} />);
 
     const tabs = screen.getAllByRole('tab');
-    expect(tabs[3]).toHaveAttribute('tabindex', '0'); // planner is active
-    expect(tabs[0]).toHaveAttribute('tabindex', '-1');
-    expect(tabs[1]).toHaveAttribute('tabindex', '-1');
-    expect(tabs[2]).toHaveAttribute('tabindex', '-1');
-    expect(tabs[4]).toHaveAttribute('tabindex', '-1');
+    TABS.forEach((_, index) => {
+      expect(tabs[index]).toHaveAttribute(
+        'tabindex',
+        index === activeIndex ? '0' : '-1'
+      );
+    });
   });
 
   it('has proper ARIA attributes on the tablist', () => {
@@ -143,9 +146,15 @@ describe('TabNavigation', () => {
     const activeTab = screen.getByRole('tab', { name: 'Welcome' });
     const inactiveTab = screen.getByRole('tab', { name: "About Crohn's" });
 
-    expect(activeTab.className).toContain('bg-brand-600');
-    expect(activeTab.className).toContain('text-white');
-    expect(inactiveTab.className).toContain('text-brand-200');
-    expect(inactiveTab.className).not.toContain('bg-brand-600');
+    // The active tab is marked with an underline pseudo-element and
+    // full-strength text colour.
+    expect(activeTab.className).toContain('after:h-[2px]');
+    expect(activeTab.className).toContain('after:bg-brand-400');
+    expect(activeTab.className).toContain('text-brand-800');
+    expect(activeTab.className).not.toContain('text-brand-800/40');
+
+    // Inactive tabs get no underline and a muted text colour.
+    expect(inactiveTab.className).not.toContain('after:bg-brand-400');
+    expect(inactiveTab.className).toContain('text-brand-800/40');
   });
 });

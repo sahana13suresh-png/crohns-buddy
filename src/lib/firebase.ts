@@ -1,11 +1,16 @@
 /**
- * Firebase initialization and Firestore helpers for Crohn's Buddy.
+ * Firestore helpers for Crohn's Buddy.
  *
- * Uses environment variables prefixed with NEXT_PUBLIC_ for client-side access.
- * The Firestore collection "forum-messages" stores community chat messages.
+ * The FirebaseApp and its configuration live in `firebaseClient.ts`; this module
+ * only consumes them. The Firestore collection "forum-messages" stores community
+ * chat messages.
+ *
+ * Authentication no longer lives here. `auth.ts` is the single Auth_Service
+ * module, and the three names this module used to implement are re-exported
+ * below purely so callers written against the old import path keep working for
+ * one release.
  */
 
-import { initializeApp, getApps, getApp, FirebaseApp } from 'firebase/app';
 import {
   getFirestore,
   Firestore,
@@ -18,39 +23,12 @@ import {
   serverTimestamp,
   Unsubscribe,
 } from 'firebase/firestore';
-import {
-  getAuth,
-  Auth,
-  GoogleAuthProvider,
-  signInWithPopup,
-  signOut as firebaseSignOut,
-  onAuthStateChanged,
-  User,
-} from 'firebase/auth';
+import { getFirebaseApp } from './firebaseClient';
 import { ForumMessage } from './types';
-
-// ─── Firebase Configuration ────────────────────────────────────────────────────
-
-const firebaseConfig = {
-  apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY,
-  authDomain: process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN,
-  projectId: process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID,
-  storageBucket: process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET,
-  messagingSenderId: process.env.NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID,
-  appId: process.env.NEXT_PUBLIC_FIREBASE_APP_ID,
-};
 
 // ─── Initialization ────────────────────────────────────────────────────────────
 
-let app: FirebaseApp;
 let db: Firestore;
-
-function getFirebaseApp(): FirebaseApp {
-  if (!app) {
-    app = getApps().length > 0 ? getApp() : initializeApp(firebaseConfig);
-  }
-  return app;
-}
 
 export function getDb(): Firestore {
   if (!db) {
@@ -59,46 +37,15 @@ export function getDb(): Firestore {
   return db;
 }
 
-// ─── Authentication ────────────────────────────────────────────────────────────
-
-let auth: Auth;
-
-export function getAuthInstance(): Auth {
-  if (!auth) {
-    auth = getAuth(getFirebaseApp());
-  }
-  return auth;
-}
+// ─── Deprecated auth re-exports ────────────────────────────────────────────────
 
 /**
- * Sign in with Google popup.
- * Returns the authenticated user or null on failure.
+ * @deprecated Import from `@/lib/auth` instead. These are thin re-exports kept
+ * for one release; note that `signInWithGoogle` now returns a
+ * `GoogleSignInOutcome` rather than a `User | null`, and `onAuthChange` emits an
+ * `AuthSession | null`.
  */
-export async function signInWithGoogle(): Promise<User | null> {
-  try {
-    const provider = new GoogleAuthProvider();
-    const result = await signInWithPopup(getAuthInstance(), provider);
-    return result.user;
-  } catch (error) {
-    console.error('Google sign-in failed:', error);
-    return null;
-  }
-}
-
-/**
- * Sign out the current user.
- */
-export async function signOut(): Promise<void> {
-  await firebaseSignOut(getAuthInstance());
-}
-
-/**
- * Subscribe to auth state changes.
- * Returns an unsubscribe function.
- */
-export function onAuthChange(callback: (user: User | null) => void): () => void {
-  return onAuthStateChanged(getAuthInstance(), callback);
-}
+export { signInWithGoogle, signOut, onAuthChange } from './auth';
 
 // ─── Firestore Collection ──────────────────────────────────────────────────────
 

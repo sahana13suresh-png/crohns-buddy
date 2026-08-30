@@ -6,6 +6,8 @@
 
 # testing
 /coverage
+/playwright-report/
+/test-results/
 
 # next.js
 /.next/
@@ -34,3 +36,6 @@ yarn-error.log*
 *.tsbuildinfo
 next-env.d.ts
 .env*
+# Requirement 13.7: the placeholder-only example file stays tracked; every real
+# .env* file above remains ignored so no credential value is ever committed.
+!.env.local.example

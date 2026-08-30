@@ -1,11 +1,12 @@
 'use client';
 
-import { useState, useCallback } from 'react';
+import { useState, useCallback, type ReactNode } from 'react';
 import QuizFlow from '@/components/planner/QuizFlow';
 import MealPlanDisplay from '@/components/planner/MealPlanDisplay';
 import AIChatInterface from '@/components/planner/AIChatInterface';
-import { compilePrompt, QuizAnswers } from '@/lib/compilePrompt';
-import { MealPlanResponse } from '@/lib/types';
+import SavePlanControl from '@/components/planner/SavePlanControl';
+import { compilePrompt, compileStoredPlanContext, QuizAnswers } from '@/lib/compilePrompt';
+import { MealPlanRecord, MealPlanResponse } from '@/lib/types';
 
 /**
  * Medical disclaimer shown at the top of the AI Meal Planner page.
@@ -30,13 +31,32 @@ function MedicalDisclaimer() {
 
 type PageState = 'quiz' | 'generating' | 'result';
 
-export default function MealPlannerPage() {
+export interface MealPlannerPageProps {
+  /**
+   * The saved-plans panel, rendered above the planner and handed the reopen
+   * callback. It is a render prop rather than a direct `SavedPlansList` mount so
+   * this page owns the state a reopen changes — the displayed plan, the retained
+   * Meal_Plan_Id, and the AI chat context — while the list stays a presentational
+   * consumer of it.
+   */
+  renderSavedPlans?: (openStoredPlan: (record: MealPlanRecord) => void) => ReactNode;
+}
+
+export default function MealPlannerPage({ renderSavedPlans }: MealPlannerPageProps = {}) {
   const [pageState, setPageState] = useState<PageState>('quiz');
   const [quizAnswers, setQuizAnswers] = useState<QuizAnswers | null>(null);
   const [mealPlan, setMealPlan] = useState<MealPlanResponse['mealPlan'] | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [compiledPrompt, setCompiledPrompt] = useState<string>('');
+  /**
+   * The Meal_Plan_Id the displayed plan is stored under, or null when it has
+   * never been saved (Requirement 5.13). It lives here rather than inside
+   * `SavePlanControl` because it belongs to the plan: it is set by a successful
+   * create, carried in by a reopened record, and cleared by anything that puts a
+   * different plan on screen.
+   */
+  const [savedMealPlanId, setSavedMealPlanId] = useState<string | null>(null);
 
   /**
    * Generates a meal plan by POSTing quiz answers to /api/meal-plan.
@@ -46,6 +66,9 @@ export default function MealPlannerPage() {
     setIsLoading(true);
     setError(null);
     setPageState('generating');
+    // A freshly generated plan is a different plan, so it holds no Meal_Plan_Id
+    // and its first save creates a record rather than replacing the last one.
+    setSavedMealPlanId(null);
 
     try {
       const response = await fetch('/api/meal-plan', {
@@ -108,6 +131,26 @@ export default function MealPlannerPage() {
   }, [quizAnswers, generateMealPlan]);
 
   /**
+   * Opens a stored Meal_Plan_Record (Requirements 6.4, 6.7).
+   *
+   * Three pieces of state move together, and that is the whole point of the
+   * handler: the stored content becomes the displayed plan, its Meal_Plan_Id
+   * becomes the id a save updates (5.13), and the chat context is recomputed from
+   * the stored content so the previously displayed plan stops being supplied to
+   * `AIChatInterface` (6.7). The quiz answers behind the old plan are dropped for
+   * the same reason — they describe a plan that is no longer on screen.
+   */
+  const openStoredPlan = useCallback((record: MealPlanRecord) => {
+    setQuizAnswers(null);
+    setMealPlan(record.content);
+    setSavedMealPlanId(record.mealPlanId);
+    setCompiledPrompt(compileStoredPlanContext(record.content));
+    setIsLoading(false);
+    setError(null);
+    setPageState('result');
+  }, []);
+
+  /**
    * Resets the page back to the quiz state.
    */
   const handleStartOver = useCallback(() => {
@@ -117,6 +160,7 @@ export default function MealPlannerPage() {
     setIsLoading(false);
     setError(null);
     setCompiledPrompt('');
+    setSavedMealPlanId(null);
   }, []);
 
   return (
@@ -134,6 +178,9 @@ export default function MealPlannerPage() {
       {/* Medical Disclaimer - visible without scrolling (Requirement 5.1) */}
       <MedicalDisclaimer />
 
+      {/* Saved plans panel, when the caller supplies one (Requirements 6.1, 6.7) */}
+      {renderSavedPlans?.(openStoredPlan)}
+
       {/* Quiz State */}
       {pageState === 'quiz' && (
         <QuizFlow onComplete={handleQuizComplete} />
@@ -149,6 +196,15 @@ export default function MealPlannerPage() {
             error={error}
             onRetry={handleRetry}
           />
+
+          {/* Save control — inside the displayed plan view (Requirements 5.1, 5.12) */}
+          {mealPlan && !isLoading && !error && (
+            <SavePlanControl
+              mealPlan={mealPlan}
+              savedMealPlanId={savedMealPlanId}
+              onSaved={setSavedMealPlanId}
+            />
+          )}
 
           {/* AI Chat Interface — shown only after meal plan is successfully generated */}
           {mealPlan && !isLoading && !error && (
