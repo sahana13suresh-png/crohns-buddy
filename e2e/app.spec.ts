@@ -59,8 +59,14 @@ test('account modal provides a branded signup and recovery experience', async ({
     page.getByRole('button', { name: 'Sign up with Facebook' }),
   ).toBeDisabled();
   await expect(
-    page.getByRole('button', { name: 'Sign up with LinkedIn' }),
+    page.getByRole('button', { name: 'Sign up with Amazon' }),
   ).toBeDisabled();
+  await expect(
+    page.getByRole('button', { name: 'Sign up with Apple' }),
+  ).toBeDisabled();
+  await expect(
+    page.getByRole('button', { name: /sign up with linkedin/i }),
+  ).toHaveCount(0);
 
   await page.getByRole('button', { name: 'Already have an account?' }).click();
   await expect(page.getByRole('heading', { name: 'Log in with email' })).toBeVisible();

@@ -59,7 +59,9 @@ describe('account modal', () => {
       'current-password',
     );
     expect(screen.getByRole('button', { name: 'Log in' })).toBeEnabled();
-    expect(screen.queryByText(/cognito|amazon/i)).not.toBeInTheDocument();
+    expect(
+      screen.queryByText(/cognito|amazon web services|aws cognito/i),
+    ).not.toBeInTheDocument();
   });
 
   it('submits email credentials and closes after successful login', async () => {
@@ -159,8 +161,14 @@ describe('account modal', () => {
       screen.getByRole('button', { name: 'Sign in with Facebook' }),
     ).toBeDisabled();
     expect(
-      screen.getByRole('button', { name: 'Sign in with LinkedIn' }),
+      screen.getByRole('button', { name: 'Sign in with Amazon' }),
     ).toBeDisabled();
+    expect(
+      screen.getByRole('button', { name: 'Sign in with Apple' }),
+    ).toBeDisabled();
+    expect(
+      screen.queryByRole('button', { name: /linkedin/i }),
+    ).not.toBeInTheDocument();
     expect(screen.queryByText('Private by design')).not.toBeInTheDocument();
     google.focus();
     await user.keyboard('{Enter}');

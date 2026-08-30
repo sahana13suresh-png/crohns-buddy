@@ -30,7 +30,11 @@ export type GoogleSignInOutcome =
   | { status: 'no-email' }
   | { status: 'failed'; code: string };
 
-export type SocialProviderName = 'Google' | 'Facebook' | 'LinkedIn';
+export type SocialProviderName =
+  | 'Google'
+  | 'Facebook'
+  | 'LoginWithAmazon'
+  | 'SignInWithApple';
 
 export type AuthErrorKind =
   | 'email-already-in-use'

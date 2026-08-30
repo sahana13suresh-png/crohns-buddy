@@ -37,8 +37,9 @@ handled by Cognito behind the application's branded account interface. Passwords
 only for the requested account operation and are never persisted by the application.
 ID, access, and refresh tokens are stored in Secure, HttpOnly cookies.
 
-Google, Facebook, and LinkedIn social login are optional because each provider requires
-its own application credentials. Configure this authorized redirect URI in each provider:
+Google, Facebook, Login with Amazon, and Sign in with Apple are optional because each
+provider requires its own application credentials. Configure this authorized redirect URI
+in each provider:
 
 ```text
 https://crohns-buddy-853513360253.auth.us-east-1.amazoncognito.com/oauth2/idpresponse
@@ -49,12 +50,13 @@ Then export the matching credential pair before deploying:
 ```text
 GOOGLE_OAUTH_CLIENT_ID / GOOGLE_OAUTH_CLIENT_SECRET
 FACEBOOK_APP_ID / FACEBOOK_APP_SECRET
-LINKEDIN_CLIENT_ID / LINKEDIN_CLIENT_SECRET
+AMAZON_OAUTH_CLIENT_ID / AMAZON_OAUTH_CLIENT_SECRET
+APPLE_SERVICES_ID / APPLE_TEAM_ID / APPLE_KEY_ID / APPLE_PRIVATE_KEY
 ```
 
 The CloudFormation template leaves a provider disabled when either value in its pair is
-absent. The account UI still shows the provider as coming soon so available sign-up
-choices remain clear.
+absent, or when any required Apple value is absent. The account UI still shows the provider
+as coming soon so available sign-up choices remain clear.
 
 The deployment uses the Amplify SSR compute role through the AWS SDK default credential
 provider. No long-lived AWS access key or Bedrock bearer token is stored in Amplify.

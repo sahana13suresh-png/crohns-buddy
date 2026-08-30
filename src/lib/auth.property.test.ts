@@ -961,7 +961,8 @@ const RECOGNIZED_PROVIDERS: readonly Property23ProviderId[] =
 const PROVIDER_LABELS: Record<Property23ProviderId, string> = {
   google: 'Google',
   facebook: 'Facebook',
-  linkedin: 'LinkedIn',
+  amazon: 'Amazon',
+  apple: 'Apple',
 };
 
 const escapeForRegExp = (value: string): string => value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
@@ -972,7 +973,7 @@ const PROVIDER_CONTROL_PATTERN = new RegExp(
 );
 
 /** Names a deployment might put in the list that no build recognizes. */
-const UNRELATED_PROVIDER_NAMES = ['apple', 'twitter', 'microsoft', 'okta', 'github'] as const;
+const UNRELATED_PROVIDER_NAMES = ['linkedin', 'twitter', 'microsoft', 'okta', 'github'] as const;
 
 /** Whitespace a hand-edited `.env` file leaves around an entry, plus none at all. */
 const arbConfigPadding = fc.constantFrom('', ' ', '  ', '\t', '\n', ' \r\n ', '\u00a0');

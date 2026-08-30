@@ -52,10 +52,26 @@ Parameters:
     Type: String
     NoEcho: true
     Default: ''
-  LinkedInClientId:
+  FacebookApiVersion:
+    Type: String
+    Default: v21.0
+  LoginWithAmazonClientId:
     Type: String
     Default: ''
-  LinkedInClientSecret:
+  LoginWithAmazonClientSecret:
+    Type: String
+    NoEcho: true
+    Default: ''
+  AppleServicesId:
+    Type: String
+    Default: ''
+  AppleTeamId:
+    Type: String
+    Default: ''
+  AppleKeyId:
+    Type: String
+    Default: ''
+  ApplePrivateKey:
     Type: String
     NoEcho: true
     Default: ''
@@ -73,9 +89,14 @@ Conditions:
   HasFacebookProvider: !And
     - !Not [!Equals [!Ref FacebookClientId, '']]
     - !Not [!Equals [!Ref FacebookClientSecret, '']]
-  HasLinkedInProvider: !And
-    - !Not [!Equals [!Ref LinkedInClientId, '']]
-    - !Not [!Equals [!Ref LinkedInClientSecret, '']]
+  HasLoginWithAmazonProvider: !And
+    - !Not [!Equals [!Ref LoginWithAmazonClientId, '']]
+    - !Not [!Equals [!Ref LoginWithAmazonClientSecret, '']]
+  HasAppleProvider: !And
+    - !Not [!Equals [!Ref AppleServicesId, '']]
+    - !Not [!Equals [!Ref AppleTeamId, '']]
+    - !Not [!Equals [!Ref AppleKeyId, '']]
+    - !Not [!Equals [!Ref ApplePrivateKey, '']]
 
 Resources:
   SourceRepository:
@@ -187,24 +208,41 @@ Resources:
         client_id: !Ref FacebookClientId
         client_secret: !Ref FacebookClientSecret
         authorize_scopes: public_profile, email
+        api_version: !Ref FacebookApiVersion
       AttributeMapping:
         email: email
         name: name
         username: id
 
-  LinkedInIdentityProvider:
+  LoginWithAmazonIdentityProvider:
     Type: AWS::Cognito::UserPoolIdentityProvider
-    Condition: HasLinkedInProvider
+    Condition: HasLoginWithAmazonProvider
     Properties:
-      ProviderName: LinkedIn
-      ProviderType: OIDC
+      ProviderName: LoginWithAmazon
+      ProviderType: LoginWithAmazon
       UserPoolId: !Ref UserPool
       ProviderDetails:
-        client_id: !Ref LinkedInClientId
-        client_secret: !Ref LinkedInClientSecret
-        authorize_scopes: openid email profile
-        oidc_issuer: https://www.linkedin.com/oauth
-        attributes_request_method: GET
+        client_id: !Ref LoginWithAmazonClientId
+        client_secret: !Ref LoginWithAmazonClientSecret
+        authorize_scopes: profile
+      AttributeMapping:
+        email: email
+        name: name
+        username: user_id
+
+  AppleIdentityProvider:
+    Type: AWS::Cognito::UserPoolIdentityProvider
+    Condition: HasAppleProvider
+    Properties:
+      ProviderName: SignInWithApple
+      ProviderType: SignInWithApple
+      UserPoolId: !Ref UserPool
+      ProviderDetails:
+        client_id: !Ref AppleServicesId
+        team_id: !Ref AppleTeamId
+        key_id: !Ref AppleKeyId
+        private_key: !Ref ApplePrivateKey
+        authorize_scopes: email name
       AttributeMapping:
         email: email
         name: name
@@ -236,7 +274,8 @@ Resources:
         - COGNITO
         - !If [HasGoogleProvider, !Ref GoogleIdentityProvider, !Ref 'AWS::NoValue']
         - !If [HasFacebookProvider, !Ref FacebookIdentityProvider, !Ref 'AWS::NoValue']
-        - !If [HasLinkedInProvider, !Ref LinkedInIdentityProvider, !Ref 'AWS::NoValue']
+        - !If [HasLoginWithAmazonProvider, !Ref LoginWithAmazonIdentityProvider, !Ref 'AWS::NoValue']
+        - !If [HasAppleProvider, !Ref AppleIdentityProvider, !Ref 'AWS::NoValue']
       PreventUserExistenceErrors: ENABLED
       EnableTokenRevocation: true
       AccessTokenValidity: 60
@@ -391,7 +430,8 @@ Resources:
             - ','
             - - !If [HasGoogleProvider, google, '']
               - !If [HasFacebookProvider, facebook, '']
-              - !If [HasLinkedInProvider, linkedin, '']
+              - !If [HasLoginWithAmazonProvider, amazon, '']
+              - !If [HasAppleProvider, apple, '']
         - Name: COGNITO_AWS_REGION
           Value: !Ref AWS::Region
         - Name: COGNITO_USER_POOL_ID
@@ -411,7 +451,8 @@ Resources:
             - ','
             - - !If [HasGoogleProvider, Google, '']
               - !If [HasFacebookProvider, Facebook, '']
-              - !If [HasLinkedInProvider, LinkedIn, '']
+              - !If [HasLoginWithAmazonProvider, LoginWithAmazon, '']
+              - !If [HasAppleProvider, SignInWithApple, '']
       Tags:
         - Key: application
           Value: crohns-buddy
@@ -535,5 +576,7 @@ Outputs:
     Value: !If [HasGoogleProvider, ENABLED, AWAITING_PROVIDER_CREDENTIALS]
   FacebookSocialLoginStatus:
     Value: !If [HasFacebookProvider, ENABLED, AWAITING_PROVIDER_CREDENTIALS]
-  LinkedInSocialLoginStatus:
-    Value: !If [HasLinkedInProvider, ENABLED, AWAITING_PROVIDER_CREDENTIALS]
+  LoginWithAmazonSocialLoginStatus:
+    Value: !If [HasLoginWithAmazonProvider, ENABLED, AWAITING_PROVIDER_CREDENTIALS]
+  AppleSocialLoginStatus:
+    Value: !If [HasAppleProvider, ENABLED, AWAITING_PROVIDER_CREDENTIALS]

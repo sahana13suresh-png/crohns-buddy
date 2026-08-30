@@ -39,7 +39,8 @@ import {
 export const RECOGNIZED_IDENTITY_PROVIDERS = [
   'google',
   'facebook',
-  'linkedin',
+  'amazon',
+  'apple',
 ] as const;
 
 export type IdentityProviderId = (typeof RECOGNIZED_IDENTITY_PROVIDERS)[number];
@@ -109,7 +110,15 @@ export function messageForProviderOutcome(outcome: GoogleSignInOutcome): string 
 const PROVIDER_NAMES: Record<IdentityProviderId, SocialProviderName> = {
   google: 'Google',
   facebook: 'Facebook',
-  linkedin: 'LinkedIn',
+  amazon: 'LoginWithAmazon',
+  apple: 'SignInWithApple',
+};
+
+const PROVIDER_LABELS: Record<IdentityProviderId, string> = {
+  google: 'Google',
+  facebook: 'Facebook',
+  amazon: 'Amazon',
+  apple: 'Apple',
 };
 
 /** Google's mark, decorative: the button's visible text carries the label. */
@@ -153,7 +162,7 @@ function FacebookMark(): ReactElement {
   );
 }
 
-function LinkedInMark(): ReactElement {
+function AmazonMark(): ReactElement {
   return (
     <svg
       className="h-5 w-5 shrink-0"
@@ -161,10 +170,33 @@ function LinkedInMark(): ReactElement {
       aria-hidden="true"
       focusable="false"
     >
-      <rect x="1" y="1" width="22" height="22" rx="3" fill="#0A66C2" />
       <path
-        d="M6.1 9.1h2.7V18H6.1V9.1zm1.35-4.4a1.57 1.57 0 110 3.14 1.57 1.57 0 010-3.14zM10.55 9.1h2.58v1.22h.04c.36-.68 1.24-1.4 2.55-1.4 2.73 0 3.23 1.8 3.23 4.13V18h-2.69v-4.39c0-1.05-.02-2.39-1.46-2.39-1.46 0-1.68 1.14-1.68 2.31V18h-2.69l.12-8.9z"
-        fill="#fff"
+        d="M15.7 16.8c-4.15 1.93-6.73.32-8.38-.68-.26-.16-.7.04-.32.48 1.38 1.67 5.9 3.02 9.29.66.56-.39-.03-.72-.59-.46z"
+        fill="#FF9900"
+      />
+      <path
+        d="M17.27 15.92c-.42-.54-2.8-.26-3.86-.13-.32.04-.37-.24-.08-.44 1.88-1.32 4.96-.94 5.32-.5.36.45-.1 3.53-1.86 5-.27.23-.53.1-.41-.19.4-.96 1.31-3.2.89-3.74z"
+        fill="#FF9900"
+      />
+      <path
+        d="M13.5 14.08c-.9.67-2.2 1.03-3.27 1.03-1.82 0-3.43-.9-3.43-2.7 0-1.42.77-2.39 1.87-2.86.95-.42 2.28-.49 3.3-.6v-.2c0-.38.03-.82-.19-1.15-.2-.29-.59-.41-.93-.41-.63 0-1.2.33-1.34 1l-2.14-.23c.18-1.04.76-1.83 1.53-2.34.77-.5 1.77-.68 2.7-.68 1.2 0 2.77.32 3.42 1.23.6.84.54 1.96.54 3.18v2.89c0 .87.36 1.25.7 1.72l-1.9 1.65c-.27-.24-.53-.5-.86-1.53zm-1.53-3.24c-1.02 0-2.1.22-2.1 1.42 0 .61.32 1.02.88 1.02.42 0 .82-.26 1.07-.68.31-.51.29-1 .29-1.58v-.18h-.14z"
+        fill="#111827"
+      />
+    </svg>
+  );
+}
+
+function AppleMark(): ReactElement {
+  return (
+    <svg
+      className="h-5 w-5 shrink-0"
+      viewBox="0 0 24 24"
+      aria-hidden="true"
+      focusable="false"
+    >
+      <path
+        d="M16.73 12.54c.02 2.12 1.86 2.83 1.88 2.84-.02.05-.29 1-1 1.99-.61.85-1.25 1.7-2.25 1.72-.98.02-1.3-.58-2.43-.58-1.12 0-1.48.56-2.41.6-.97.04-1.7-.96-2.32-1.8-1.26-1.82-2.22-5.14-.93-7.38a3.61 3.61 0 013.08-1.86c.96-.02 1.87.65 2.43.65.56 0 1.62-.8 2.73-.69.46.02 1.76.19 2.6 1.41-.07.04-1.55.9-1.53 2.69zm-1.95-5.67c.51-.62.86-1.48.76-2.34-.74.03-1.64.5-2.17 1.11-.47.55-.89 1.43-.77 2.27.83.06 1.67-.42 2.18-1.04z"
+        fill="#111827"
       />
     </svg>
   );
@@ -173,7 +205,8 @@ function LinkedInMark(): ReactElement {
 const PROVIDER_MARKS: Record<IdentityProviderId, () => ReactElement> = {
   google: GoogleMark,
   facebook: FacebookMark,
-  linkedin: LinkedInMark,
+  amazon: AmazonMark,
+  apple: AppleMark,
 };
 
 // ─── Component ─────────────────────────────────────────────────────────────────
@@ -265,6 +298,7 @@ export default function GoogleSignInButton({
       {RECOGNIZED_IDENTITY_PROVIDERS.map((provider) => {
         const Mark = PROVIDER_MARKS[provider];
         const providerName = PROVIDER_NAMES[provider];
+        const providerLabel = PROVIDER_LABELS[provider];
         const isConfigured = configuredSet.has(provider);
         const isDisabled = !isConfigured || pending !== null;
         return (
@@ -274,16 +308,16 @@ export default function GoogleSignInButton({
             onClick={() => void startSignIn(provider)}
             disabled={isDisabled}
             aria-busy={pending === provider}
-            aria-label={`${verb} with ${providerName}`}
+            aria-label={`${verb} with ${providerLabel}`}
             title={
               isConfigured
                 ? undefined
-                : `${providerName} ${intent === 'signup' ? 'sign-up' : 'sign-in'} is coming soon`
+                : `${providerLabel} ${intent === 'signup' ? 'sign-up' : 'sign-in'} is coming soon`
             }
             className="flex items-center gap-3 rounded-lg border border-gray-300 bg-white px-4 py-2.5 text-sm font-medium text-gray-700 shadow-sm transition-colors hover:border-gray-400 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-brand-500 disabled:cursor-not-allowed disabled:bg-gray-50 disabled:text-gray-500 disabled:opacity-80"
           >
             <Mark />
-            <span className="flex-1 text-left">{`${verb} with ${providerName}`}</span>
+            <span className="flex-1 text-left">{`${verb} with ${providerLabel}`}</span>
             {!isConfigured && (
               <span
                 aria-hidden="true"

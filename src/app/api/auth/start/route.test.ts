@@ -69,6 +69,22 @@ describe('GET /api/auth/start', () => {
     expect(location.searchParams.get('identity_provider')).toBe('Google');
   });
 
+  it.each(['Facebook', 'LoginWithAmazon', 'SignInWithApple'])(
+    'preserves the Cognito provider identifier for %s',
+    (provider) => {
+      process.env.AUTH_SOCIAL_PROVIDERS = provider;
+      const response = GET(
+        new NextRequest(
+          `https://www.crohns-buddy.com/api/auth/start?provider=${provider}`,
+        ),
+      );
+
+      const location = new URL(response.headers.get('location')!);
+      expect(location.pathname).toBe('/oauth2/authorize');
+      expect(location.searchParams.get('identity_provider')).toBe(provider);
+    },
+  );
+
   it('rejects a provider that is not enabled for this deployment', async () => {
     const response = GET(
       new NextRequest(

@@ -13,13 +13,26 @@ import type { ForumMessage } from '@/lib/types';
  */
 
 const signInWithProvider =
-  vi.fn<(provider: 'Google' | 'Facebook' | 'LinkedIn') => Promise<GoogleSignInOutcome>>();
+  vi.fn<
+    (
+      provider:
+        | 'Google'
+        | 'Facebook'
+        | 'LoginWithAmazon'
+        | 'SignInWithApple',
+    ) => Promise<GoogleSignInOutcome>
+  >();
 const signOut = vi.fn<() => Promise<void>>();
 let emitSession: (session: AuthSession | null) => void = () => {};
 
 vi.mock('@/lib/auth', () => ({
-  signInWithProvider: (provider: 'Google' | 'Facebook' | 'LinkedIn') =>
-    signInWithProvider(provider),
+  signInWithProvider: (
+    provider:
+      | 'Google'
+      | 'Facebook'
+      | 'LoginWithAmazon'
+      | 'SignInWithApple',
+  ) => signInWithProvider(provider),
   signOut: () => signOut(),
   onAuthChange: (callback: (session: AuthSession | null) => void) => {
     emitSession = callback;

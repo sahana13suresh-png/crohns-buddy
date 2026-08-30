@@ -15,11 +15,24 @@ import type { GoogleSignInOutcome } from '@/lib/auth';
  */
 
 const signInWithProvider =
-  vi.fn<(provider: 'Google' | 'Facebook' | 'LinkedIn') => Promise<GoogleSignInOutcome>>();
+  vi.fn<
+    (
+      provider:
+        | 'Google'
+        | 'Facebook'
+        | 'LoginWithAmazon'
+        | 'SignInWithApple',
+    ) => Promise<GoogleSignInOutcome>
+  >();
 
 vi.mock('@/lib/auth', () => ({
-  signInWithProvider: (provider: 'Google' | 'Facebook' | 'LinkedIn') =>
-    signInWithProvider(provider),
+  signInWithProvider: (
+    provider:
+      | 'Google'
+      | 'Facebook'
+      | 'LoginWithAmazon'
+      | 'SignInWithApple',
+  ) => signInWithProvider(provider),
 }));
 
 const GOOGLE_CONTROL = { name: /sign in with google/i } as const;
@@ -30,14 +43,19 @@ describe('parseConfiguredProviders', () => {
     expect(parseConfiguredProviders(null)).toEqual([]);
     expect(parseConfiguredProviders('')).toEqual([]);
     expect(parseConfiguredProviders('   ')).toEqual([]);
-    expect(parseConfiguredProviders('apple, twitter')).toEqual([]);
+    expect(parseConfiguredProviders('linkedin, twitter')).toEqual([]);
   });
 
   it('keeps each recognized provider exactly once, ignoring case, spacing, and repeats', () => {
-    expect(parseConfiguredProviders(' GOOGLE , facebook , LinkedIn,google,')).toEqual([
+    expect(
+      parseConfiguredProviders(
+        ' GOOGLE , facebook , Amazon, APPLE,google,',
+      ),
+    ).toEqual([
       'google',
       'facebook',
-      'linkedin',
+      'amazon',
+      'apple',
     ]);
   });
 
@@ -62,7 +80,10 @@ describe('GoogleSignInButton', () => {
       screen.getByRole('button', { name: /sign in with facebook/i }),
     ).toBeDisabled();
     expect(
-      screen.getByRole('button', { name: /sign in with linkedin/i }),
+      screen.getByRole('button', { name: /sign in with amazon/i }),
+    ).toBeDisabled();
+    expect(
+      screen.getByRole('button', { name: /sign in with apple/i }),
     ).toBeDisabled();
 
     await userEvent.tab();
@@ -74,15 +95,15 @@ describe('GoogleSignInButton', () => {
     );
   });
 
-  it.each([undefined, '', '  ', 'apple'])(
+  it.each([undefined, '', '  ', 'linkedin'])(
     'renders disabled provider choices for the configuration %o',
     (providers) => {
       render(<GoogleSignInButton providers={providers ?? ''} />);
-      expect(screen.getAllByRole('button')).toHaveLength(3);
+      expect(screen.getAllByRole('button')).toHaveLength(4);
       for (const control of screen.getAllByRole('button')) {
         expect(control).toBeDisabled();
       }
-      expect(screen.getAllByText('Soon')).toHaveLength(3);
+      expect(screen.getAllByText('Soon')).toHaveLength(4);
     },
   );
 
