@@ -6,9 +6,9 @@ import {
 import { mockClient } from 'aws-sdk-client-mock';
 import { beforeEach, describe, expect, it } from 'vitest';
 import {
-  buildSelfSignupUpdateInput,
-  ensureCognitoSelfSignup,
-} from './ensure-cognito-self-signup.mjs';
+  buildDisableSelfRegistrationInput,
+  ensureCognitoSelfRegistrationDisabled,
+} from './ensure-cognito-self-registration-disabled.mjs';
 
 const cognitoMock = mockClient(CognitoIdentityProviderClient);
 
@@ -41,13 +41,13 @@ const userPool = {
   },
 };
 
-describe('Cognito self-service signup deployment guard', () => {
+describe('Cognito self-registration deployment guard', () => {
   beforeEach(() => {
     cognitoMock.reset();
   });
 
   it('preserves mutable security settings without attempting to update system tags', () => {
-    const input = buildSelfSignupUpdateInput(userPool);
+    const input = buildDisableSelfRegistrationInput(userPool);
 
     expect(input).toMatchObject({
       UserPoolId: 'us-east-1_example',
@@ -59,30 +59,37 @@ describe('Cognito self-service signup deployment guard', () => {
       MfaConfiguration: 'OPTIONAL',
       EmailConfiguration: userPool.EmailConfiguration,
       AdminCreateUserConfig: {
-        AllowAdminCreateUserOnly: false,
+        AllowAdminCreateUserOnly: true,
         UnusedAccountValidityDays: 7,
       },
     });
     expect(input).not.toHaveProperty('UserPoolTags');
   });
 
-  it('updates and verifies a pool when signup is blocked', async () => {
+  it('updates and verifies a pool when self-registration is enabled', async () => {
+    const selfRegistrationEnabledPool = {
+      ...userPool,
+      AdminCreateUserConfig: {
+        ...userPool.AdminCreateUserConfig,
+        AllowAdminCreateUserOnly: false,
+      },
+    };
     cognitoMock
       .on(DescribeUserPoolCommand)
-      .resolvesOnce({ UserPool: userPool })
+      .resolvesOnce({ UserPool: selfRegistrationEnabledPool })
       .resolvesOnce({
         UserPool: {
           ...userPool,
           AdminCreateUserConfig: {
             ...userPool.AdminCreateUserConfig,
-            AllowAdminCreateUserOnly: false,
+            AllowAdminCreateUserOnly: true,
           },
         },
       });
     cognitoMock.on(UpdateUserPoolCommand).resolves({});
 
     await expect(
-      ensureCognitoSelfSignup({
+      ensureCognitoSelfRegistrationDisabled({
         userPoolId: userPool.Id,
         client: new CognitoIdentityProviderClient({}),
       }),
@@ -94,18 +101,11 @@ describe('Cognito self-service signup deployment guard', () => {
     expect(cognitoMock.commandCalls(UpdateUserPoolCommand)).toHaveLength(1);
   });
 
-  it('only verifies a pool when signup is already enabled', async () => {
-    const enabledPool = {
-      ...userPool,
-      AdminCreateUserConfig: {
-        ...userPool.AdminCreateUserConfig,
-        AllowAdminCreateUserOnly: false,
-      },
-    };
-    cognitoMock.on(DescribeUserPoolCommand).resolves({ UserPool: enabledPool });
+  it('only verifies a pool when self-registration is already disabled', async () => {
+    cognitoMock.on(DescribeUserPoolCommand).resolves({ UserPool: userPool });
 
     await expect(
-      ensureCognitoSelfSignup({
+      ensureCognitoSelfRegistrationDisabled({
         userPoolId: userPool.Id,
         client: new CognitoIdentityProviderClient({}),
       }),

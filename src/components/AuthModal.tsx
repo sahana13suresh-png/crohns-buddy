@@ -16,6 +16,7 @@ import {
   confirmPasswordReset,
   confirmSignInMfa,
   confirmSignUp,
+  isSelfRegistrationEnabled,
   requestPasswordReset,
   resendSignUpCode,
   signIn,
@@ -28,6 +29,7 @@ export interface AuthModalProps {
   onClose: () => void;
   onSuccess: () => void;
   onSwitchMode: () => void;
+  allowSignup?: boolean;
   redirectOutcome?: GoogleSignInOutcome | null;
   onRedirectOutcomeHandled?: () => void;
 }
@@ -108,6 +110,7 @@ export default function AuthModal({
   onClose,
   onSuccess,
   onSwitchMode,
+  allowSignup = isSelfRegistrationEnabled(),
   redirectOutcome = null,
   onRedirectOutcomeHandled,
 }: AuthModalProps) {
@@ -117,7 +120,7 @@ export default function AuthModal({
   const confirmPasswordId = useId();
   const nameId = useId();
   const codeId = useId();
-  const isSignup = mode === 'signup';
+  const isSignup = mode === 'signup' && allowSignup;
   const socialProviders = RECOGNIZED_IDENTITY_PROVIDERS;
 
   const [view, setView] = useState<AuthView>('credentials');
@@ -141,7 +144,7 @@ export default function AuthModal({
     setCode('');
     setError(null);
     setStatus(null);
-  }, [mode]);
+  }, [mode, allowSignup]);
 
   useEffect(() => {
     const previousOverflow = document.body.style.overflow;
@@ -748,7 +751,7 @@ export default function AuthModal({
                   </button>
                 )}
 
-                {view === 'credentials' && (
+                {view === 'credentials' && (isSignup || allowSignup) && (
                   <button
                     type="button"
                     onClick={onSwitchMode}

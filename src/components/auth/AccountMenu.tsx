@@ -30,7 +30,10 @@ import { useEffect, useState } from 'react';
 import AuthModal from '@/components/AuthModal';
 import { messageForProviderOutcome } from '@/components/auth/GoogleSignInButton';
 import { useSession } from '@/components/auth/SessionProvider';
-import { isCognitoConfigured } from '@/lib/auth';
+import {
+  isCognitoConfigured,
+  isSelfRegistrationEnabled,
+} from '@/lib/auth';
 
 type AuthModalMode = 'login' | 'signup';
 
@@ -39,6 +42,7 @@ const CONTROL_CLASS =
 
 export default function AccountMenu() {
   const authConfigured = isCognitoConfigured();
+  const selfRegistrationEnabled = isSelfRegistrationEnabled();
   const {
     session,
     status,
@@ -110,13 +114,15 @@ export default function AccountMenu() {
             <button type="button" onClick={() => openModal('login')} className={CONTROL_CLASS}>
               Log In
             </button>
-            <button
-              type="button"
-              onClick={() => openModal('signup')}
-              className="text-xs uppercase tracking-widest text-brand-50 bg-brand-800 px-4 py-2 rounded-sm hover:opacity-80 transition-opacity duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-400"
-            >
-              Sign Up
-            </button>
+            {selfRegistrationEnabled && (
+              <button
+                type="button"
+                onClick={() => openModal('signup')}
+                className="text-xs uppercase tracking-widest text-brand-50 bg-brand-800 px-4 py-2 rounded-sm hover:opacity-80 transition-opacity duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-400"
+              >
+                Sign Up
+              </button>
+            )}
           </>
         )}
 
@@ -133,6 +139,7 @@ export default function AccountMenu() {
           onClose={() => setModalMode(null)}
           onSuccess={() => setModalMode(null)}
           onSwitchMode={() => setModalMode(modalMode === 'login' ? 'signup' : 'login')}
+          allowSignup={selfRegistrationEnabled}
           redirectOutcome={redirectOutcome}
           onRedirectOutcomeHandled={clearRedirectOutcome}
         />

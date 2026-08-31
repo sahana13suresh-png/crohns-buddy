@@ -46,6 +46,25 @@ export function setBedrockRuntimeClient(client: BedrockRuntimeClient | undefined
   sdkClient = client;
 }
 
+function guardrailConfig(): ConverseCommandInput['guardrailConfig'] {
+  const guardrailIdentifier = process.env.BEDROCK_GUARDRAIL_ID?.trim();
+  const guardrailVersion = process.env.BEDROCK_GUARDRAIL_VERSION?.trim();
+
+  if (Boolean(guardrailIdentifier) !== Boolean(guardrailVersion)) {
+    throw new Error(
+      'BEDROCK_GUARDRAIL_ID and BEDROCK_GUARDRAIL_VERSION must be configured together',
+    );
+  }
+
+  return guardrailIdentifier && guardrailVersion
+    ? {
+        guardrailIdentifier,
+        guardrailVersion,
+        trace: 'enabled',
+      }
+    : undefined;
+}
+
 function commandInput(options: BedrockInvokeOptions): ConverseCommandInput {
   const {
     systemPrompt,
@@ -62,6 +81,7 @@ function commandInput(options: BedrockInvokeOptions): ConverseCommandInput {
     })),
     system: [{ text: systemPrompt }],
     inferenceConfig: { maxTokens, temperature },
+    guardrailConfig: guardrailConfig(),
   };
 }
 
@@ -120,6 +140,7 @@ async function invokeWithApiKey(
         messages: input.messages,
         system: input.system,
         inferenceConfig: input.inferenceConfig,
+        guardrailConfig: input.guardrailConfig,
       }),
       signal: controller.signal,
     });

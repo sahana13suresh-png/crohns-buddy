@@ -23,6 +23,8 @@ beforeEach(() => {
   vi.stubEnv('AWS_REGION', 'us-east-1');
   vi.stubEnv('BEDROCK_MODEL_ID', 'us.anthropic.claude-sonnet-4-6');
   vi.stubEnv('AWS_BEARER_TOKEN_BEDROCK', undefined);
+  vi.stubEnv('BEDROCK_GUARDRAIL_ID', undefined);
+  vi.stubEnv('BEDROCK_GUARDRAIL_VERSION', undefined);
   setBedrockRuntimeClient(new BedrockRuntimeClient({ region: 'us-east-1' }));
 });
 
@@ -50,8 +52,32 @@ describe('invokeBedrockClaude', () => {
     expect(input.inferenceConfig).toEqual({ maxTokens: 120, temperature: 0.2 });
   });
 
+  it('attaches the configured guardrail to SDK requests', async () => {
+    vi.stubEnv('BEDROCK_GUARDRAIL_ID', 'guardrail-123');
+    vi.stubEnv('BEDROCK_GUARDRAIL_VERSION', '3');
+    bedrock.on(ConverseCommand).resolves({
+      output: {
+        message: {
+          role: 'assistant',
+          content: [{ text: 'In-scope response' }],
+        },
+      },
+    });
+
+    await invokeBedrockClaude(options);
+
+    const input = bedrock.commandCalls(ConverseCommand)[0].args[0].input;
+    expect(input.guardrailConfig).toEqual({
+      guardrailIdentifier: 'guardrail-123',
+      guardrailVersion: '3',
+      trace: 'enabled',
+    });
+  });
+
   it('preserves the API-key request path for local development', async () => {
     vi.stubEnv('AWS_BEARER_TOKEN_BEDROCK', 'test-token');
+    vi.stubEnv('BEDROCK_GUARDRAIL_ID', 'guardrail-123');
+    vi.stubEnv('BEDROCK_GUARDRAIL_VERSION', '3');
     const fetchSpy = vi.spyOn(globalThis, 'fetch').mockResolvedValue(
       new Response(
         JSON.stringify({
@@ -72,5 +98,22 @@ describe('invokeBedrockClaude', () => {
         }),
       })
     );
+    const request = fetchSpy.mock.calls[0][1] as RequestInit;
+    expect(JSON.parse(String(request.body))).toMatchObject({
+      guardrailConfig: {
+        guardrailIdentifier: 'guardrail-123',
+        guardrailVersion: '3',
+        trace: 'enabled',
+      },
+    });
+  });
+
+  it('fails closed when the guardrail configuration is incomplete', async () => {
+    vi.stubEnv('BEDROCK_GUARDRAIL_ID', 'guardrail-123');
+
+    await expect(invokeBedrockClaude(options)).rejects.toThrow(
+      'BEDROCK_GUARDRAIL_ID and BEDROCK_GUARDRAIL_VERSION must be configured together',
+    );
+    expect(bedrock.commandCalls(ConverseCommand)).toHaveLength(0);
   });
 });

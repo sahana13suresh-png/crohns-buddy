@@ -95,6 +95,10 @@ export function isCognitoConfigured(): boolean {
   return process.env.NEXT_PUBLIC_AUTH_ENABLED === 'true';
 }
 
+export function isSelfRegistrationEnabled(): boolean {
+  return process.env.NEXT_PUBLIC_AUTH_SELF_REGISTRATION_ENABLED === 'true';
+}
+
 export function getAuthErrorCode(error: unknown): string | null {
   if (error === null || typeof error !== 'object') return null;
   const code = (error as { code?: unknown }).code;

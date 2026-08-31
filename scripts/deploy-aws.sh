@@ -87,6 +87,7 @@ append_parameter CustomDomainUrl CUSTOM_DOMAIN_URL
 append_parameter AmplifyProductionUrl AMPLIFY_PRODUCTION_URL
 append_parameter LocalDevelopmentUrl LOCAL_DEVELOPMENT_URL
 append_parameter CognitoDomainPrefix COGNITO_DOMAIN_PREFIX
+append_parameter EnableSocialIdentityProviders ENABLE_SOCIAL_IDENTITY_PROVIDERS
 append_parameter GoogleClientId GOOGLE_OAUTH_CLIENT_ID
 append_parameter GoogleClientSecret GOOGLE_OAUTH_CLIENT_SECRET
 append_parameter FacebookClientId FACEBOOK_APP_ID
@@ -100,6 +101,8 @@ append_parameter AppleKeyId APPLE_KEY_ID
 append_parameter ApplePrivateKey APPLE_PRIVATE_KEY
 append_parameter PerspectiveApiKey PERSPECTIVE_API_KEY
 append_parameter BedrockModelId BEDROCK_MODEL_ID
+append_parameter BedrockGuardrailId BEDROCK_GUARDRAIL_ID
+append_parameter BedrockGuardrailVersion BEDROCK_GUARDRAIL_VERSION
 
 if [[ "${STACK_EXISTS}" == 'false' ]]; then
   echo "Creating the data store, IAM roles, budget, and deployment repository..."
@@ -179,9 +182,9 @@ USER_POOL_ID="$(aws cloudformation describe-stacks \
   --query "Stacks[0].Outputs[?OutputKey=='CognitoUserPoolId'].OutputValue" \
   --output text)"
 
-echo "Verifying Cognito self-service signup..."
+echo "Verifying Cognito self-registration is disabled..."
 AWS_PROFILE="${PROFILE}" AWS_REGION="${REGION}" \
-  node "${REPO_ROOT}/scripts/ensure-cognito-self-signup.mjs" "${USER_POOL_ID}"
+  node "${REPO_ROOT}/scripts/ensure-cognito-self-registration-disabled.mjs" "${USER_POOL_ID}"
 
 echo "Waiting for the Amplify production build..."
 JOB_ID=''

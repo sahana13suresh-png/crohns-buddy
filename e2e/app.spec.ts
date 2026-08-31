@@ -21,15 +21,15 @@ test('core navigation exposes saved plans and account settings', async ({ page }
   await expect(page.getByRole('link', { name: 'Privacy Notice' })).toBeVisible();
 });
 
-test('account modal provides a branded signup and recovery experience', async ({ page }) => {
+test('account modal provides branded signin and recovery with registration disabled', async ({ page }) => {
   await page.goto('/');
 
-  const signUp = page.getByRole('button', { name: 'Sign Up' });
+  const logIn = page.getByRole('button', { name: 'Log In' });
   const accountUnavailable = page
     .getByRole('navigation', { name: 'Account' })
     .getByText('Account features are not configured.');
 
-  await expect(signUp.or(accountUnavailable)).toBeVisible();
+  await expect(logIn.or(accountUnavailable)).toBeVisible();
 
   if (await accountUnavailable.isVisible()) {
     await page.getByRole('tab', { name: 'Account' }).click();
@@ -38,40 +38,42 @@ test('account modal provides a branded signup and recovery experience', async ({
     return;
   }
 
-  await signUp.click();
-  await expect(page.getByRole('dialog')).toBeVisible();
-  await expect(page.getByRole('link', { name: 'Privacy Notice' })).toBeVisible();
-  await expect(page.getByRole('heading', { name: 'Create your account' })).toBeVisible();
-  await expect(page.getByLabel('Display name')).toBeVisible();
-  await expect(page.getByLabel('Email')).toHaveAttribute('autocomplete', 'email');
-  await expect(page.getByLabel('Password', { exact: true })).toHaveAttribute(
+  await expect(page.getByRole('button', { name: 'Sign Up' })).toHaveCount(0);
+  await logIn.click();
+  const dialog = page.getByRole('dialog');
+  await expect(dialog).toBeVisible();
+  await expect(dialog).toHaveAccessibleName('Log in with email');
+  await expect(dialog.getByRole('link', { name: 'Privacy Notice' })).toBeVisible();
+  await expect(dialog.getByRole('heading', { name: 'Log in with email' })).toBeVisible();
+  await expect(
+    dialog.getByRole('textbox', { name: 'Email', exact: true }),
+  ).toHaveAttribute('autocomplete', 'email');
+  await expect(dialog.getByLabel('Password', { exact: true })).toHaveAttribute(
     'autocomplete',
-    'new-password'
+    'current-password'
   );
-  await expect(page.getByLabel('Confirm password')).toBeVisible();
-  await expect(page.getByRole('button', { name: 'Create account' })).toBeEnabled();
-  await expect(page.getByRole('dialog').getByText(/cognito|amazon cognito/i)).toHaveCount(0);
-  await expect(page.getByRole('dialog').getByText('Private by design')).toHaveCount(0);
+  await expect(dialog.getByRole('button', { name: 'Log in' })).toBeEnabled();
+  await expect(dialog.getByRole('button', { name: 'Create a new account' })).toHaveCount(0);
+  await expect(dialog.getByText(/cognito|amazon cognito/i)).toHaveCount(0);
+  await expect(dialog.getByText('Private by design')).toHaveCount(0);
 
-  const google = page.getByRole('button', { name: 'Sign up with Google' });
+  const google = dialog.getByRole('button', { name: 'Sign in with Google' });
   await expect(google).toBeEnabled();
   await expect(
-    page.getByRole('button', { name: 'Sign up with Facebook' }),
+    dialog.getByRole('button', { name: 'Sign in with Facebook' }),
   ).toBeDisabled();
   await expect(
-    page.getByRole('button', { name: 'Sign up with Amazon' }),
+    dialog.getByRole('button', { name: 'Sign in with Amazon' }),
   ).toBeDisabled();
   await expect(
-    page.getByRole('button', { name: 'Sign up with Apple' }),
+    dialog.getByRole('button', { name: 'Sign in with Apple' }),
   ).toBeDisabled();
   await expect(
-    page.getByRole('button', { name: /sign up with linkedin/i }),
+    dialog.getByRole('button', { name: /sign in with linkedin/i }),
   ).toHaveCount(0);
 
-  await page.getByRole('button', { name: 'Already have an account?' }).click();
-  await expect(page.getByRole('heading', { name: 'Log in with email' })).toBeVisible();
-  await page.getByRole('button', { name: 'Forgot password?' }).click();
-  await expect(page.getByRole('heading', { name: 'Reset your password' })).toBeVisible();
+  await dialog.getByRole('button', { name: 'Forgot password?' }).click();
+  await expect(dialog.getByRole('heading', { name: 'Reset your password' })).toBeVisible();
 });
 
 test('tab navigation supports keyboard focus and activation', async ({ page }) => {

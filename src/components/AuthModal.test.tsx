@@ -26,6 +26,7 @@ function renderModal(overrides: Partial<AuthModalProps> = {}) {
     onClose: vi.fn(),
     onSuccess: vi.fn(),
     onSwitchMode: vi.fn(),
+    allowSignup: true,
     ...overrides,
   };
   return { ...render(<AuthModal {...props} />), props };
@@ -191,5 +192,19 @@ describe('account modal', () => {
 
     await user.keyboard('{Escape}');
     expect(props.onClose).toHaveBeenCalledTimes(1);
+  });
+
+  it('falls back to login and removes account-creation controls when signup is disabled', () => {
+    renderModal({ mode: 'signup', allowSignup: false });
+
+    expect(
+      screen.getByRole('heading', { name: 'Log in with email' }),
+    ).toBeVisible();
+    expect(
+      screen.queryByRole('button', { name: 'Create a new account' }),
+    ).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole('button', { name: 'Create account' }),
+    ).not.toBeInTheDocument();
   });
 });

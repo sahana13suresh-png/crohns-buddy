@@ -820,7 +820,7 @@ describe('session validity as a function of age', () => {
     }
   });
 
-  it('leaves zero records displayed and the signin and signup controls visible after any ending', async () => {
+  it('leaves zero records displayed and signin visible after any ending', async () => {
     const { createElement, Fragment } = mods.react;
     const { act, cleanup, fireEvent, render, screen } = mods.rtl;
     const SessionProvider = mods.provider.default;
@@ -888,11 +888,11 @@ describe('session validity as a function of age', () => {
             }
           }
 
-          // Zero Meal_Plan_Records displayed, and the signin and signup controls
-          // visible — for every one of the three endings.
+          // Zero Meal_Plan_Records displayed, signin visible, and
+          // self-registration absent — for every one of the three endings.
           expect(screen.queryAllByTestId('plan-row')).toHaveLength(0);
           expect(screen.getByRole('button', { name: 'Log In' })).toBeInTheDocument();
-          expect(screen.getByRole('button', { name: 'Sign Up' })).toBeInTheDocument();
+          expect(screen.queryByRole('button', { name: 'Sign Up' })).toBeNull();
           expect(screen.queryByRole('button', { name: 'Log Out' })).toBeNull();
 
           // The expiry message appears exactly when the Session ended on its own
@@ -1185,6 +1185,7 @@ describe('Identity_Provider controls mirror the Deployment_Configuration', () =>
                   onClose: noop,
                   onSuccess: noop,
                   onSwitchMode: noop,
+                  allowSignup: true,
                 }),
               );
 

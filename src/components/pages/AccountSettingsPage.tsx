@@ -66,7 +66,10 @@ import {
 } from '@/lib/accountDeletion';
 import { exportFileName } from '@/lib/accountExportFile';
 import { callApi } from '@/lib/apiClient';
-import { isCognitoConfigured } from '@/lib/auth';
+import {
+  isCognitoConfigured,
+  isSelfRegistrationEnabled,
+} from '@/lib/auth';
 import { getAllEntries, type TrackerEntries } from '@/lib/trackerStorage';
 // Type-only, so no module edge is created into the route's dependency graph —
 // that module reaches the DynamoDB client, which has no business in a browser
@@ -168,6 +171,7 @@ export interface AccountSettingsPageProps {
 
 export default function AccountSettingsPage({ deletionPorts }: AccountSettingsPageProps = {}) {
   const authConfigured = isCognitoConfigured();
+  const selfRegistrationEnabled = isSelfRegistrationEnabled();
   const { session, status } = useSession();
 
   const ports = useMemo(
@@ -319,9 +323,11 @@ export default function AccountSettingsPage({ deletionPorts }: AccountSettingsPa
           <button type="button" onClick={() => setModalMode('login')} className="btn-primary">
             Log In
           </button>
-          <button type="button" onClick={() => setModalMode('signup')} className={SECONDARY_BUTTON}>
-            Sign Up
-          </button>
+          {selfRegistrationEnabled && (
+            <button type="button" onClick={() => setModalMode('signup')} className={SECONDARY_BUTTON}>
+              Sign Up
+            </button>
+          )}
         </>
       ) : (
         <p className="text-sm text-brand-800/60">
@@ -581,6 +587,7 @@ export default function AccountSettingsPage({ deletionPorts }: AccountSettingsPa
           onClose={() => setModalMode(null)}
           onSuccess={() => setModalMode(null)}
           onSwitchMode={() => setModalMode(modalMode === 'login' ? 'signup' : 'login')}
+          allowSignup={selfRegistrationEnabled}
         />
       )}
     </div>

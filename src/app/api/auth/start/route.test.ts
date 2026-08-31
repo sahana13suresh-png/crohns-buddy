@@ -17,6 +17,7 @@ beforeEach(() => {
     COGNITO_DOMAIN: 'https://crohns-buddy-test.auth.us-east-1.amazoncognito.com',
     AUTH_ALLOWED_ORIGINS: 'https://www.crohns-buddy.com',
     AUTH_SOCIAL_PROVIDERS: 'Google',
+    AUTH_SELF_REGISTRATION_ENABLED: 'false',
   };
 });
 
@@ -25,7 +26,23 @@ afterEach(() => {
 });
 
 describe('GET /api/auth/start', () => {
-  it('starts native account creation with PKCE and protected transient cookies', () => {
+  it('blocks native account creation when self-registration is disabled', async () => {
+    const response = GET(
+      new NextRequest(
+        'https://www.crohns-buddy.com/api/auth/start?intent=signup&returnTo=%2Faccount%3Ftab%3Dsecurity',
+      ),
+    );
+
+    expect(response.status).toBe(403);
+    await expect(response.json()).resolves.toEqual({
+      message: 'Self-registration is disabled.',
+    });
+    expect(response.headers.get('cache-control')).toBe('no-store');
+    expect(response.headers.get('location')).toBeNull();
+  });
+
+  it('retains native account creation behind an explicit deployment gate', () => {
+    process.env.AUTH_SELF_REGISTRATION_ENABLED = 'true';
     const response = GET(
       new NextRequest(
         'https://www.crohns-buddy.com/api/auth/start?intent=signup&returnTo=%2Faccount%3Ftab%3Dsecurity',

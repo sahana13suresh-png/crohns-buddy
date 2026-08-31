@@ -9,6 +9,13 @@ Parameters:
       - 'true'
       - 'false'
     Description: Create Amplify hosting after the CodeCommit repository contains the application.
+  EnableSocialIdentityProviders:
+    Type: String
+    Default: 'false'
+    AllowedValues:
+      - 'true'
+      - 'false'
+    Description: Explicit security gate for social federation, which can create new user profiles.
   RepositoryName:
     Type: String
     Default: crohns-buddy-deploy
@@ -18,6 +25,12 @@ Parameters:
   BedrockModelId:
     Type: String
     Default: us.anthropic.claude-sonnet-4-6
+  BedrockGuardrailId:
+    Type: String
+    Default: 6vwvhqpr4sj7
+  BedrockGuardrailVersion:
+    Type: String
+    Default: '3'
   CronSecret:
     Type: String
     NoEcho: true
@@ -84,15 +97,19 @@ Conditions:
   HostingEnabled: !Equals [!Ref DeployHosting, 'true']
   HasAlertEmail: !Not [!Equals [!Ref AlertEmail, '']]
   HasGoogleProvider: !And
+    - !Equals [!Ref EnableSocialIdentityProviders, 'true']
     - !Not [!Equals [!Ref GoogleClientId, '']]
     - !Not [!Equals [!Ref GoogleClientSecret, '']]
   HasFacebookProvider: !And
+    - !Equals [!Ref EnableSocialIdentityProviders, 'true']
     - !Not [!Equals [!Ref FacebookClientId, '']]
     - !Not [!Equals [!Ref FacebookClientSecret, '']]
   HasLoginWithAmazonProvider: !And
+    - !Equals [!Ref EnableSocialIdentityProviders, 'true']
     - !Not [!Equals [!Ref LoginWithAmazonClientId, '']]
     - !Not [!Equals [!Ref LoginWithAmazonClientSecret, '']]
   HasAppleProvider: !And
+    - !Equals [!Ref EnableSocialIdentityProviders, 'true']
     - !Not [!Equals [!Ref AppleServicesId, '']]
     - !Not [!Equals [!Ref AppleTeamId, '']]
     - !Not [!Equals [!Ref AppleKeyId, '']]
@@ -152,7 +169,7 @@ Resources:
           - Name: verified_email
             Priority: 1
       AdminCreateUserConfig:
-        AllowAdminCreateUserOnly: false
+        AllowAdminCreateUserOnly: true
       MfaConfiguration: OPTIONAL
       EnabledMfas:
         - SOFTWARE_TOKEN_MFA
@@ -358,6 +375,11 @@ Resources:
                 Resource:
                   - arn:aws:bedrock:*::foundation-model/*
                   - !Sub arn:${AWS::Partition}:bedrock:*:${AWS::AccountId}:inference-profile/*
+              - Sid: ApplyCrohnsScopeGuardrail
+                Effect: Allow
+                Action:
+                  - bedrock:ApplyGuardrail
+                Resource: !Sub arn:${AWS::Partition}:bedrock:${AWS::Region}:${AWS::AccountId}:guardrail/${BedrockGuardrailId}
 
   MonthlyCostBudget:
     Type: AWS::Budgets::Budget
@@ -400,7 +422,7 @@ Resources:
             preBuild:
               commands:
                 - npm ci
-                - env | grep -E '^(MEAL_PLAN_TABLE_NAME|MEAL_PLAN_AWS_REGION|BEDROCK_MODEL_ID|CRON_SECRET|PERSPECTIVE_API_KEY|NEXT_PUBLIC_AUTH_|COGNITO_|AUTH_ALLOWED_ORIGINS|AUTH_SOCIAL_PROVIDERS)=' >> .env.production
+                - env | grep -E '^(MEAL_PLAN_TABLE_NAME|MEAL_PLAN_AWS_REGION|BEDROCK_MODEL_ID|BEDROCK_GUARDRAIL_|CRON_SECRET|PERSPECTIVE_API_KEY|NEXT_PUBLIC_AUTH_|COGNITO_|AUTH_ALLOWED_ORIGINS|AUTH_SOCIAL_PROVIDERS|AUTH_SELF_REGISTRATION_ENABLED)=' >> .env.production
             build:
               commands:
                 - npm run build
@@ -419,12 +441,18 @@ Resources:
           Value: !Ref AWS::Region
         - Name: BEDROCK_MODEL_ID
           Value: !Ref BedrockModelId
+        - Name: BEDROCK_GUARDRAIL_ID
+          Value: !Ref BedrockGuardrailId
+        - Name: BEDROCK_GUARDRAIL_VERSION
+          Value: !Ref BedrockGuardrailVersion
         - Name: CRON_SECRET
           Value: !Ref CronSecret
         - Name: PERSPECTIVE_API_KEY
           Value: !Ref PerspectiveApiKey
         - Name: NEXT_PUBLIC_AUTH_ENABLED
           Value: 'true'
+        - Name: NEXT_PUBLIC_AUTH_SELF_REGISTRATION_ENABLED
+          Value: 'false'
         - Name: NEXT_PUBLIC_AUTH_PROVIDERS
           Value: !Join
             - ','
@@ -453,6 +481,8 @@ Resources:
               - !If [HasFacebookProvider, Facebook, '']
               - !If [HasLoginWithAmazonProvider, LoginWithAmazon, '']
               - !If [HasAppleProvider, SignInWithApple, '']
+        - Name: AUTH_SELF_REGISTRATION_ENABLED
+          Value: 'false'
       Tags:
         - Key: application
           Value: crohns-buddy

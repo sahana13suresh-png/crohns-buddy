@@ -1,6 +1,6 @@
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import AccountMenu from './AccountMenu';
 import type { SessionContextValue, SessionStatus } from './SessionProvider';
 import type { AuthSession } from '@/lib/auth';
@@ -46,6 +46,11 @@ function renderWith(status: SessionStatus, overrides?: Partial<SessionContextVal
 describe('AccountMenu', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    vi.stubEnv('NEXT_PUBLIC_AUTH_SELF_REGISTRATION_ENABLED', 'false');
+  });
+
+  afterEach(() => {
+    vi.unstubAllEnvs();
   });
 
   it('shows the display name and a signout control while a Session is active', () => {
@@ -72,19 +77,26 @@ describe('AccountMenu', () => {
     expect(signOut).toHaveBeenCalledTimes(1);
   });
 
-  it('shows the signin and signup controls with no Session', () => {
+  it('shows only the signin control with no Session when registration is disabled', () => {
     renderWith('unauthenticated');
 
     expect(screen.getByRole('button', { name: 'Log In' })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Sign Up' })).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Sign Up' })).not.toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Log Out' })).not.toBeInTheDocument();
   });
 
-  it('shows the expiry message alongside the signin and signup controls', () => {
+  it('shows the expiry message alongside the signin control', () => {
     renderWith('expired');
 
     expect(screen.getByRole('status')).toHaveTextContent('Your session expired.');
     expect(screen.getByRole('button', { name: 'Log In' })).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Sign Up' })).not.toBeInTheDocument();
+  });
+
+  it('shows signup only when the deployment explicitly enables registration', () => {
+    vi.stubEnv('NEXT_PUBLIC_AUTH_SELF_REGISTRATION_ENABLED', 'true');
+    renderWith('unauthenticated');
+
     expect(screen.getByRole('button', { name: 'Sign Up' })).toBeInTheDocument();
   });
 

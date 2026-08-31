@@ -2,6 +2,7 @@ import { createHash, randomBytes } from 'node:crypto';
 import { NextRequest, NextResponse } from 'next/server';
 
 import {
+  isSelfRegistrationEnabled,
   readCognitoConfig,
   requestOrigin,
   safeReturnTo,
@@ -20,6 +21,13 @@ export function GET(request: NextRequest): NextResponse {
     const config = readCognitoConfig();
     const origin = requestOrigin(request);
     const returnTo = safeReturnTo(request.nextUrl.searchParams.get('returnTo'));
+    const intent = request.nextUrl.searchParams.get('intent');
+    if (intent === 'signup' && !isSelfRegistrationEnabled()) {
+      return NextResponse.json(
+        { message: 'Self-registration is disabled.' },
+        { status: 403, headers: { 'Cache-Control': 'no-store' } },
+      );
+    }
     const providerRequest = request.nextUrl.searchParams.get('provider')?.trim() ?? '';
     const provider = config.socialProviders.find(
       (candidate) => candidate.toLowerCase() === providerRequest.toLowerCase(),
@@ -33,7 +41,6 @@ export function GET(request: NextRequest): NextResponse {
     const challenge = createHash('sha256').update(verifier).digest('base64url');
     const redirectUri = `${origin}/api/auth/callback`;
 
-    const intent = request.nextUrl.searchParams.get('intent');
     const authorizationPath = intent === 'signup' && !provider
       ? '/signup'
       : '/oauth2/authorize';

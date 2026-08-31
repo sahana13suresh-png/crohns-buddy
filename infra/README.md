@@ -17,8 +17,8 @@ The CloudFormation stack creates:
 - an Amazon Cognito user pool and app client for native email accounts, plus an
   OAuth authorization-code flow with PKCE for optional social providers;
 - a DynamoDB on-demand table with deletion protection;
-- a least-privilege Amplify SSR compute role for DynamoDB item operations and Bedrock
-  inference;
+- a least-privilege Amplify SSR compute role for DynamoDB item operations, Bedrock
+  inference, and the Crohn's-only Bedrock guardrail;
 - an EventBridge-triggered Lambda that calls the authenticated pending-deletion sweep once
   per day;
 - a monthly AWS cost budget at $20.
@@ -32,10 +32,11 @@ protection enabled because it stores patient-generated data.
 AWS_PROFILE=crohns-buddy-deploy ./scripts/deploy-aws.sh
 ```
 
-Email signup, email verification, signin, password recovery, and session management are
-handled by Cognito behind the application's branded account interface. Passwords are used
-only for the requested account operation and are never persisted by the application.
-ID, access, and refresh tokens are stored in Secure, HttpOnly cookies.
+Self-registration is disabled. Accounts must be created by an administrator; signin,
+password recovery, and session management are handled by Cognito behind the application's
+branded account interface. Passwords are used only for the requested account operation and
+are never persisted by the application. ID, access, and refresh tokens are stored in
+Secure, HttpOnly cookies.
 
 Google, Facebook, Login with Amazon, and Sign in with Apple are optional because each
 provider requires its own application credentials. Configure this authorized redirect URI
@@ -54,15 +55,21 @@ AMAZON_OAUTH_CLIENT_ID / AMAZON_OAUTH_CLIENT_SECRET
 APPLE_SERVICES_ID / APPLE_TEAM_ID / APPLE_KEY_ID / APPLE_PRIVATE_KEY
 ```
 
-The CloudFormation template leaves a provider disabled when either value in its pair is
-absent, or when any required Apple value is absent. The account UI still shows the provider
-as coming soon so available sign-up choices remain clear.
+Social federation is also protected by the `EnableSocialIdentityProviders` security gate,
+which defaults to `false`, because first-time federation can create a user profile. A
+provider remains disabled unless the gate is explicitly enabled and all of its credentials
+are supplied.
 
 The deployment uses the Amplify SSR compute role through the AWS SDK default credential
 provider. No long-lived AWS access key or Bedrock bearer token is stored in Amplify.
 The Next.js build injects platform-managed values only into its server compilation. This
 keeps SSR configuration available on Amplify without placing secrets in browser bundles or
 public static assets.
+
+The chat uses two independent scope controls: a strict system prompt that refuses
+general-purpose requests and Bedrock guardrail `6vwvhqpr4sj7`, version `3`. The compute role
+can apply only that account-local guardrail. Set `BEDROCK_GUARDRAIL_ID` and
+`BEDROCK_GUARDRAIL_VERSION` together when overriding the defaults.
 
 ## Verify
 

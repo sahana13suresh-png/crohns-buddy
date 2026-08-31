@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 
 import {
   assertSameOriginRequest,
+  isSelfRegistrationEnabled,
   verifyCognitoTokenSet,
   type CognitoTokenSet,
 } from '@/lib/server/cognitoAuth';
@@ -81,6 +82,12 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
     const body = await readBody(request);
     switch (body.action) {
       case 'signup': {
+        if (!isSelfRegistrationEnabled()) {
+          return json(
+            { code: 'self-registration-disabled' },
+            { status: 403 },
+          );
+        }
         const result = await signUpWithPassword({
           email: body.email,
           password: body.password,
@@ -89,9 +96,21 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
         return json(result);
       }
       case 'confirm-signup':
+        if (!isSelfRegistrationEnabled()) {
+          return json(
+            { code: 'self-registration-disabled' },
+            { status: 403 },
+          );
+        }
         await confirmPasswordSignUp({ email: body.email, code: body.code });
         return json({ step: 'sign-in' });
       case 'resend-signup':
+        if (!isSelfRegistrationEnabled()) {
+          return json(
+            { code: 'self-registration-disabled' },
+            { status: 403 },
+          );
+        }
         await resendPasswordSignUpCode(body.email);
         return json({ step: 'confirm-signup' });
       case 'signin': {

@@ -24,7 +24,7 @@ const UPDATABLE_PROPERTIES = [
   'UserPoolTier',
 ];
 
-export function buildSelfSignupUpdateInput(userPool) {
+export function buildDisableSelfRegistrationInput(userPool) {
   if (!userPool?.Id || !userPool.Name) {
     throw new Error('Cognito returned an incomplete user-pool description.');
   }
@@ -34,7 +34,7 @@ export function buildSelfSignupUpdateInput(userPool) {
     PoolName: userPool.Name,
     AdminCreateUserConfig: {
       ...userPool.AdminCreateUserConfig,
-      AllowAdminCreateUserOnly: false,
+      AllowAdminCreateUserOnly: true,
     },
   };
 
@@ -50,7 +50,7 @@ export function buildSelfSignupUpdateInput(userPool) {
   return input;
 }
 
-export async function ensureCognitoSelfSignup({
+export async function ensureCognitoSelfRegistrationDisabled({
   userPoolId,
   region = process.env.AWS_REGION || process.env.AWS_DEFAULT_REGION,
   client = new CognitoIdentityProviderClient({ region }),
@@ -67,10 +67,12 @@ export async function ensureCognitoSelfSignup({
     throw new Error(`Cognito user pool ${userPoolId} was not found.`);
   }
 
-  if (current.UserPool.AdminCreateUserConfig?.AllowAdminCreateUserOnly) {
+  if (
+    current.UserPool.AdminCreateUserConfig?.AllowAdminCreateUserOnly !== true
+  ) {
     await client.send(
       new UpdateUserPoolCommand(
-        buildSelfSignupUpdateInput(current.UserPool),
+        buildDisableSelfRegistrationInput(current.UserPool),
       ),
     );
   }
@@ -81,27 +83,27 @@ export async function ensureCognitoSelfSignup({
 
   if (
     !verified.UserPool ||
-    verified.UserPool.AdminCreateUserConfig?.AllowAdminCreateUserOnly !== false
+    verified.UserPool.AdminCreateUserConfig?.AllowAdminCreateUserOnly !== true
   ) {
     throw new Error(
-      `Cognito self-service signup is not enabled for ${userPoolId}.`,
+      `Cognito self-registration is not disabled for ${userPoolId}.`,
     );
   }
 
   return {
     changed:
-      current.UserPool.AdminCreateUserConfig?.AllowAdminCreateUserOnly === true,
+      current.UserPool.AdminCreateUserConfig?.AllowAdminCreateUserOnly !== true,
     userPoolId,
   };
 }
 
 async function main() {
   const [userPoolId] = process.argv.slice(2);
-  const result = await ensureCognitoSelfSignup({ userPoolId });
+  const result = await ensureCognitoSelfRegistrationDisabled({ userPoolId });
   console.log(
     result.changed
-      ? `Enabled Cognito self-service signup for ${result.userPoolId}.`
-      : `Verified Cognito self-service signup for ${result.userPoolId}.`,
+      ? `Disabled Cognito self-registration for ${result.userPoolId}.`
+      : `Verified Cognito self-registration is disabled for ${result.userPoolId}.`,
   );
 }
 

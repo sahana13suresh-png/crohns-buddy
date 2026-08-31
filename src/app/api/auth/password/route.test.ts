@@ -1,5 +1,5 @@
 import { NextRequest } from 'next/server';
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 const mocks = vi.hoisted(() => ({
   verifyCognitoTokenSet: vi.fn(),
@@ -59,6 +59,7 @@ function request(
 
 beforeEach(() => {
   vi.clearAllMocks();
+  vi.stubEnv('AUTH_SELF_REGISTRATION_ENABLED', 'false');
   mocks.verifyCognitoTokenSet.mockResolvedValue({
     ok: true,
     session: {
@@ -74,8 +75,54 @@ beforeEach(() => {
   });
 });
 
+afterEach(() => {
+  vi.unstubAllEnvs();
+});
+
 describe('POST /api/auth/password', () => {
-  it('starts signup without returning or storing the submitted password', async () => {
+  it('blocks self-registration without invoking the Cognito signup API', async () => {
+    mocks.signUpWithPassword.mockResolvedValue({ step: 'confirm-signup' });
+
+    const response = await POST(
+      request({
+        action: 'signup',
+        email: 'patient@example.com',
+        password: 'Strong!Password1',
+        displayName: 'Patient',
+      }),
+    );
+
+    expect(response.status).toBe(403);
+    expect(await response.json()).toEqual({
+      code: 'self-registration-disabled',
+    });
+    expect(response.headers.get('cache-control')).toBe('no-store');
+    expect(mocks.signUpWithPassword).not.toHaveBeenCalled();
+    expect(response.headers.get('set-cookie')).toBeNull();
+  });
+
+  it('blocks confirmation and resend operations for pending self-registrations', async () => {
+    for (const action of ['confirm-signup', 'resend-signup']) {
+      const response = await POST(
+        request({
+          action,
+          email: 'patient@example.com',
+          code: '123456',
+        }),
+      );
+
+      expect(response.status).toBe(403);
+      expect(await response.json()).toEqual({
+        code: 'self-registration-disabled',
+      });
+    }
+
+    expect(mocks.confirmPasswordSignUp).not.toHaveBeenCalled();
+    expect(mocks.resendPasswordSignUpCode).not.toHaveBeenCalled();
+  });
+
+  it('retains the signup implementation behind an explicit deployment gate', async () => {
+    vi.stubEnv('AUTH_SELF_REGISTRATION_ENABLED', 'true');
     mocks.signUpWithPassword.mockResolvedValue({ step: 'confirm-signup' });
 
     const response = await POST(
@@ -89,13 +136,11 @@ describe('POST /api/auth/password', () => {
 
     expect(response.status).toBe(200);
     expect(await response.json()).toEqual({ step: 'confirm-signup' });
-    expect(response.headers.get('cache-control')).toBe('no-store');
     expect(mocks.signUpWithPassword).toHaveBeenCalledWith({
       email: 'patient@example.com',
       password: 'Strong!Password1',
       displayName: 'Patient',
     });
-    expect(response.headers.get('set-cookie')).toBeNull();
   });
 
   it('sets Secure HttpOnly session cookies after verified login', async () => {

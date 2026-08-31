@@ -64,6 +64,10 @@ const jwksByIssuer = new Map<string, ReturnType<typeof createRemoteJWKSet>>();
 const revocationCache = new Map<string, RevocationEntry>();
 const cognitoClients = new Map<string, CognitoIdentityProviderClient>();
 
+export function isSelfRegistrationEnabled(): boolean {
+  return process.env.AUTH_SELF_REGISTRATION_ENABLED === 'true';
+}
+
 function normalizeOrigin(value: string): string | null {
   try {
     return new URL(value).origin;

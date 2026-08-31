@@ -28,6 +28,7 @@ vi.mock('@/components/auth/SessionProvider', () => ({ useSession: mockUseSession
 // the five destructive ports are injected instead.
 vi.mock('@/lib/auth', () => ({
   isCognitoConfigured: () => true,
+  isSelfRegistrationEnabled: () => false,
   getIdTokenForRequest: vi.fn(async () => 'token-1'),
   signOutEverywhere: vi.fn(async () => undefined),
   classifyAuthError: vi.fn(() => 'unknown'),
@@ -329,9 +330,9 @@ describe('AccountSettingsPage deletion flow', () => {
       expect(screen.getByRole('status')).toHaveTextContent(DELETION_MESSAGE_TEXT.completed)
     );
     expect(calls).toEqual(['remove-records', 'remove-account', 'clear-tracker', 'end-session']);
-    // Requirement 11.4 — the signin and signup controls are shown.
+    // Self-registration remains disabled after account removal.
     expect(screen.getByRole('button', { name: 'Log In' })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Sign Up' })).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Sign Up' })).not.toBeInTheDocument();
   });
 
   it('says removal of the remaining meal plan data is still in progress when records are left behind', async () => {
@@ -434,12 +435,12 @@ describe('AccountSettingsPage surrounding state', () => {
     );
   });
 
-  it('offers the signin and signup controls and no export control with no Session', () => {
+  it('offers signin without self-registration or export controls with no Session', () => {
     renderPage({ status: 'unauthenticated' });
 
     expect(screen.getByText(SIGNED_OUT_MESSAGE)).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Log In' })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Sign Up' })).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Sign Up' })).not.toBeInTheDocument();
     expect(screen.queryByRole('button', { name: EXPORT_LABEL })).not.toBeInTheDocument();
     expect(screen.getByRole('link', { name: 'Privacy Notice' })).toBeInTheDocument();
   });
