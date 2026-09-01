@@ -49,7 +49,7 @@ describe('account modal', () => {
     renderModal();
 
     expect(
-      screen.getByRole('heading', { name: 'Log in with email' }),
+      screen.getByRole('heading', { name: 'Log in to Crohn’s Buddy' }),
     ).toBeVisible();
     expect(screen.getByLabelText('Email')).toHaveAttribute(
       'autocomplete',
@@ -186,7 +186,7 @@ describe('account modal', () => {
       '/privacy',
     );
     await user.click(
-      screen.getByRole('button', { name: 'Create a new account' }),
+      screen.getByRole('button', { name: 'Sign up' }),
     );
     expect(props.onSwitchMode).toHaveBeenCalledTimes(1);
 
@@ -194,15 +194,28 @@ describe('account modal', () => {
     expect(props.onClose).toHaveBeenCalledTimes(1);
   });
 
-  it('falls back to login and removes account-creation controls when signup is disabled', () => {
+  it('provides a distinct invitation-only signup screen when registration is disabled', async () => {
+    const user = userEvent.setup();
+    renderModal({ allowSignup: false });
+
+    await user.click(screen.getByRole('button', { name: 'Sign up' }));
+
+    expect(
+      screen.getByRole('heading', { name: 'Sign up for Crohn’s Buddy' }),
+    ).toBeVisible();
+    expect(screen.getByText('Request an invitation')).toBeVisible();
+    expect(
+      screen.getByText(/self-service registration is temporarily unavailable/i),
+    ).toBeVisible();
+    expect(authMocks.signUp).not.toHaveBeenCalled();
+  });
+
+  it('opens the invitation-only screen when signup mode is requested but disabled', () => {
     renderModal({ mode: 'signup', allowSignup: false });
 
     expect(
-      screen.getByRole('heading', { name: 'Log in with email' }),
+      screen.getByRole('heading', { name: 'Sign up for Crohn’s Buddy' }),
     ).toBeVisible();
-    expect(
-      screen.queryByRole('button', { name: 'Create a new account' }),
-    ).not.toBeInTheDocument();
     expect(
       screen.queryByRole('button', { name: 'Create account' }),
     ).not.toBeInTheDocument();

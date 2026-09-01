@@ -58,7 +58,7 @@ describe('AccountMenu', () => {
 
     expect(screen.getByText('Ada Lovelace')).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Log Out' })).toBeInTheDocument();
-    expect(screen.queryByRole('button', { name: 'Log In' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Log In / Sign Up' })).not.toBeInTheDocument();
   });
 
   it('falls back to the email address when the Account has no display name', () => {
@@ -77,27 +77,33 @@ describe('AccountMenu', () => {
     expect(signOut).toHaveBeenCalledTimes(1);
   });
 
-  it('shows only the signin control with no Session when registration is disabled', () => {
+  it('shows a combined account-access control with no Session', () => {
     renderWith('unauthenticated');
 
-    expect(screen.getByRole('button', { name: 'Log In' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Log In / Sign Up' })).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Sign Up' })).not.toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Log Out' })).not.toBeInTheDocument();
   });
 
-  it('shows the expiry message alongside the signin control', () => {
+  it('shows the expiry message alongside the account-access control', () => {
     renderWith('expired');
 
     expect(screen.getByRole('status')).toHaveTextContent('Your session expired.');
-    expect(screen.getByRole('button', { name: 'Log In' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Log In / Sign Up' })).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Sign Up' })).not.toBeInTheDocument();
   });
 
-  it('shows signup only when the deployment explicitly enables registration', () => {
+  it('opens the real signup form from the combined control when registration is enabled', async () => {
+    const user = userEvent.setup();
     vi.stubEnv('NEXT_PUBLIC_AUTH_SELF_REGISTRATION_ENABLED', 'true');
     renderWith('unauthenticated');
 
-    expect(screen.getByRole('button', { name: 'Sign Up' })).toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: 'Log In / Sign Up' }));
+    await user.click(screen.getByRole('button', { name: 'Sign up' }));
+
+    expect(
+      screen.getByRole('heading', { name: 'Create your account' }),
+    ).toBeInTheDocument();
   });
 
   it('renders no auth control until the first Session state is known', () => {
@@ -111,11 +117,11 @@ describe('AccountMenu', () => {
     const user = userEvent.setup();
     renderWith('expired');
 
-    await user.click(screen.getByRole('button', { name: 'Log In' }));
+    await user.click(screen.getByRole('button', { name: 'Log In / Sign Up' }));
 
     expect(dismissExpiredMessage).toHaveBeenCalledTimes(1);
     expect(
-      screen.getByRole('heading', { name: 'Log in with email' }),
+      screen.getByRole('heading', { name: 'Log in to Crohn’s Buddy' }),
     ).toBeInTheDocument();
   });
 });

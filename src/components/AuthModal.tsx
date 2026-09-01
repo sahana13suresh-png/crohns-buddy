@@ -37,6 +37,7 @@ export interface AuthModalProps {
 type AuthView =
   | 'credentials'
   | 'confirm-signup'
+  | 'signup-unavailable'
   | 'forgot-password'
   | 'reset-password'
   | 'mfa';
@@ -123,7 +124,9 @@ export default function AuthModal({
   const isSignup = mode === 'signup' && allowSignup;
   const socialProviders = RECOGNIZED_IDENTITY_PROVIDERS;
 
-  const [view, setView] = useState<AuthView>('credentials');
+  const [view, setView] = useState<AuthView>(
+    mode === 'signup' && !allowSignup ? 'signup-unavailable' : 'credentials',
+  );
   const [displayName, setDisplayName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -138,7 +141,9 @@ export default function AuthModal({
   );
 
   useEffect(() => {
-    setView('credentials');
+    setView(
+      mode === 'signup' && !allowSignup ? 'signup-unavailable' : 'credentials',
+    );
     setPassword('');
     setConfirmPassword('');
     setCode('');
@@ -394,9 +399,11 @@ export default function AuthModal({
               <p className="mb-2 text-xs font-semibold uppercase tracking-[0.2em] text-brand-500">
                 {view === 'forgot-password' || view === 'reset-password'
                   ? 'Account recovery'
+                  : view === 'signup-unavailable'
+                    ? 'New account'
                   : isSignup
                     ? 'Join Crohn’s Buddy'
-                    : 'Welcome back'}
+                    : 'Account access'}
               </p>
               <h2
                 id={titleId}
@@ -406,19 +413,23 @@ export default function AuthModal({
                   ? 'Verify your email'
                   : view === 'forgot-password'
                     ? 'Reset your password'
+                    : view === 'signup-unavailable'
+                      ? 'Sign up for Crohn’s Buddy'
                     : view === 'reset-password'
                       ? 'Choose a new password'
                       : view === 'mfa'
                         ? 'Confirm it’s you'
                         : isSignup
                           ? 'Create your account'
-                          : 'Log in with email'}
+                          : 'Log in to Crohn’s Buddy'}
               </h2>
               <p className="mb-7 mt-2 text-sm leading-6 text-brand-800/55">
                 {view === 'confirm-signup'
                   ? 'Enter the six-digit code from your email.'
                   : view === 'forgot-password'
                     ? 'Enter your email and we’ll send password reset instructions.'
+                    : view === 'signup-unavailable'
+                      ? 'New accounts are currently available by invitation.'
                     : view === 'reset-password'
                       ? 'Enter your code and set a strong new password.'
                       : view === 'mfa'
@@ -429,7 +440,7 @@ export default function AuthModal({
                           }.`
                         : isSignup
                           ? 'Save your plans and preferences securely across devices.'
-                          : 'Access your saved plans and account settings.'}
+                          : 'Use your existing account, or choose Sign up below for new-account options.'}
               </p>
 
               {(error || status) && (
@@ -593,6 +604,17 @@ export default function AuthModal({
                 </form>
               )}
 
+              {view === 'signup-unavailable' && (
+                <div className="rounded-xl border border-brand-400/25 bg-brand-50 px-5 py-5 text-brand-800">
+                  <h3 className="text-base font-semibold">Request an invitation</h3>
+                  <p className="mt-2 text-sm leading-6 text-brand-800/65">
+                    Self-service registration is temporarily unavailable. Please
+                    contact the Crohn&apos;s Buddy team to request a new account.
+                    If you already have an account, return to login below.
+                  </p>
+                </div>
+              )}
+
               {view === 'forgot-password' && (
                 <form onSubmit={handleForgotPassword} className="space-y-4">
                   <div>
@@ -751,15 +773,22 @@ export default function AuthModal({
                   </button>
                 )}
 
-                {view === 'credentials' && (isSignup || allowSignup) && (
+                {view === 'credentials' && (
                   <button
                     type="button"
-                    onClick={onSwitchMode}
+                    onClick={() => {
+                      clearMessages();
+                      if (isSignup || allowSignup) {
+                        onSwitchMode();
+                      } else {
+                        setView('signup-unavailable');
+                      }
+                    }}
                     className="font-medium text-brand-500 underline decoration-brand-400/40 underline-offset-4 hover:text-brand-700"
                   >
                     {isSignup
-                      ? 'Already have an account?'
-                      : 'Create a new account'}
+                      ? 'Already have an account? Log in'
+                      : 'Sign up'}
                   </button>
                 )}
               </div>

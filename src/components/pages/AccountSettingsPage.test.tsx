@@ -331,7 +331,7 @@ describe('AccountSettingsPage deletion flow', () => {
     );
     expect(calls).toEqual(['remove-records', 'remove-account', 'clear-tracker', 'end-session']);
     // Self-registration remains disabled after account removal.
-    expect(screen.getByRole('button', { name: 'Log In' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Log In / Sign Up' })).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Sign Up' })).not.toBeInTheDocument();
   });
 
@@ -435,11 +435,11 @@ describe('AccountSettingsPage surrounding state', () => {
     );
   });
 
-  it('offers signin without self-registration or export controls with no Session', () => {
+  it('offers account access without export controls with no Session', () => {
     renderPage({ status: 'unauthenticated' });
 
     expect(screen.getByText(SIGNED_OUT_MESSAGE)).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Log In' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Log In / Sign Up' })).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Sign Up' })).not.toBeInTheDocument();
     expect(screen.queryByRole('button', { name: EXPORT_LABEL })).not.toBeInTheDocument();
     expect(screen.getByRole('link', { name: 'Privacy Notice' })).toBeInTheDocument();

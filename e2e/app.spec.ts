@@ -21,15 +21,15 @@ test('core navigation exposes saved plans and account settings', async ({ page }
   await expect(page.getByRole('link', { name: 'Privacy Notice' })).toBeVisible();
 });
 
-test('account modal provides branded signin and recovery with registration disabled', async ({ page }) => {
+test('account modal separates login, signup, and recovery choices', async ({ page }) => {
   await page.goto('/');
 
-  const logIn = page.getByRole('button', { name: 'Log In' });
+  const accountAccess = page.getByRole('button', { name: 'Log In / Sign Up' });
   const accountUnavailable = page
     .getByRole('navigation', { name: 'Account' })
     .getByText('Account features are not configured.');
 
-  await expect(logIn.or(accountUnavailable)).toBeVisible();
+  await expect(accountAccess.or(accountUnavailable)).toBeVisible();
 
   if (await accountUnavailable.isVisible()) {
     await page.getByRole('tab', { name: 'Account' }).click();
@@ -38,13 +38,12 @@ test('account modal provides branded signin and recovery with registration disab
     return;
   }
 
-  await expect(page.getByRole('button', { name: 'Sign Up' })).toHaveCount(0);
-  await logIn.click();
+  await accountAccess.click();
   const dialog = page.getByRole('dialog');
   await expect(dialog).toBeVisible();
-  await expect(dialog).toHaveAccessibleName('Log in with email');
+  await expect(dialog).toHaveAccessibleName('Log in to Crohn’s Buddy');
   await expect(dialog.getByRole('link', { name: 'Privacy Notice' })).toBeVisible();
-  await expect(dialog.getByRole('heading', { name: 'Log in with email' })).toBeVisible();
+  await expect(dialog.getByRole('heading', { name: 'Log in to Crohn’s Buddy' })).toBeVisible();
   await expect(
     dialog.getByRole('textbox', { name: 'Email', exact: true }),
   ).toHaveAttribute('autocomplete', 'email');
@@ -53,7 +52,7 @@ test('account modal provides branded signin and recovery with registration disab
     'current-password'
   );
   await expect(dialog.getByRole('button', { name: 'Log in' })).toBeEnabled();
-  await expect(dialog.getByRole('button', { name: 'Create a new account' })).toHaveCount(0);
+  await expect(dialog.getByRole('button', { name: 'Sign up' })).toBeVisible();
   await expect(dialog.getByText(/cognito|amazon cognito/i)).toHaveCount(0);
   await expect(dialog.getByText('Private by design')).toHaveCount(0);
 
@@ -72,6 +71,16 @@ test('account modal provides branded signin and recovery with registration disab
     dialog.getByRole('button', { name: /sign in with linkedin/i }),
   ).toHaveCount(0);
 
+  await dialog.getByRole('button', { name: 'Sign up' }).click();
+  await expect(
+    dialog.getByRole('heading', { name: 'Sign up for Crohn’s Buddy' }),
+  ).toBeVisible();
+  await expect(dialog.getByText('Request an invitation')).toBeVisible();
+  await expect(
+    dialog.getByText(/self-service registration is temporarily unavailable/i),
+  ).toBeVisible();
+
+  await dialog.getByRole('button', { name: 'Back to login' }).click();
   await dialog.getByRole('button', { name: 'Forgot password?' }).click();
   await expect(dialog.getByRole('heading', { name: 'Reset your password' })).toBeVisible();
 });

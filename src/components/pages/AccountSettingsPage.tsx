@@ -319,16 +319,9 @@ export default function AccountSettingsPage({ deletionPorts }: AccountSettingsPa
   const authControls = (
     <div className="flex flex-wrap gap-3">
       {authConfigured ? (
-        <>
-          <button type="button" onClick={() => setModalMode('login')} className="btn-primary">
-            Log In
-          </button>
-          {selfRegistrationEnabled && (
-            <button type="button" onClick={() => setModalMode('signup')} className={SECONDARY_BUTTON}>
-              Sign Up
-            </button>
-          )}
-        </>
+        <button type="button" onClick={() => setModalMode('login')} className="btn-primary">
+          Log In / Sign Up
+        </button>
       ) : (
         <p className="text-sm text-brand-800/60">
           Account features are not configured for this deployment.

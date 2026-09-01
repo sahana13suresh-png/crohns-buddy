@@ -891,7 +891,7 @@ describe('session validity as a function of age', () => {
           // Zero Meal_Plan_Records displayed, signin visible, and
           // self-registration absent — for every one of the three endings.
           expect(screen.queryAllByTestId('plan-row')).toHaveLength(0);
-          expect(screen.getByRole('button', { name: 'Log In' })).toBeInTheDocument();
+          expect(screen.getByRole('button', { name: 'Log In / Sign Up' })).toBeInTheDocument();
           expect(screen.queryByRole('button', { name: 'Sign Up' })).toBeNull();
           expect(screen.queryByRole('button', { name: 'Log Out' })).toBeNull();
 
