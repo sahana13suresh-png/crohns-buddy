@@ -152,6 +152,19 @@ describe('account modal', () => {
     ).toBeVisible();
   });
 
+  it('keeps signup accessible from the password-recovery screen', async () => {
+    const user = userEvent.setup();
+    renderModal({ allowSignup: false });
+
+    await user.click(screen.getByRole('button', { name: 'Forgot password?' }));
+    await user.click(screen.getByRole('button', { name: 'Sign up' }));
+
+    expect(
+      screen.getByRole('heading', { name: 'Sign up for Crohn’s Buddy' }),
+    ).toBeVisible();
+    expect(screen.getByText('Request an invitation')).toBeVisible();
+  });
+
   it('offers all social choices and keeps configured providers keyboard-operable', async () => {
     const user = userEvent.setup();
     renderModal();

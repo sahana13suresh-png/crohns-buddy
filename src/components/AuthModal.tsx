@@ -169,6 +169,15 @@ export default function AuthModal({
     setStatus(null);
   };
 
+  const openSignup = () => {
+    clearMessages();
+    if (allowSignup) {
+      onSwitchMode();
+    } else {
+      setView('signup-unavailable');
+    }
+  };
+
   const handleBackdrop = (event: MouseEvent<HTMLDivElement>) => {
     if (event.target === event.currentTarget) onClose();
   };
@@ -773,22 +782,26 @@ export default function AuthModal({
                   </button>
                 )}
 
-                {view === 'credentials' && (
+                {view === 'credentials' && isSignup && (
                   <button
                     type="button"
-                    onClick={() => {
-                      clearMessages();
-                      if (isSignup || allowSignup) {
-                        onSwitchMode();
-                      } else {
-                        setView('signup-unavailable');
-                      }
-                    }}
+                    onClick={onSwitchMode}
                     className="font-medium text-brand-500 underline decoration-brand-400/40 underline-offset-4 hover:text-brand-700"
                   >
-                    {isSignup
-                      ? 'Already have an account? Log in'
-                      : 'Sign up'}
+                    Already have an account? Log in
+                  </button>
+                )}
+
+                {!isSignup &&
+                  (view === 'credentials' ||
+                    view === 'forgot-password' ||
+                    view === 'reset-password') && (
+                  <button
+                    type="button"
+                    onClick={openSignup}
+                    className="font-medium text-brand-500 underline decoration-brand-400/40 underline-offset-4 hover:text-brand-700"
+                  >
+                    Sign up
                   </button>
                 )}
               </div>

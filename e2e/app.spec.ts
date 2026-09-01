@@ -83,6 +83,7 @@ test('account modal separates login, signup, and recovery choices', async ({ pag
   await dialog.getByRole('button', { name: 'Back to login' }).click();
   await dialog.getByRole('button', { name: 'Forgot password?' }).click();
   await expect(dialog.getByRole('heading', { name: 'Reset your password' })).toBeVisible();
+  await expect(dialog.getByRole('button', { name: 'Sign up' })).toBeVisible();
 });
 
 test('tab navigation supports keyboard focus and activation', async ({ page }) => {
