@@ -21,7 +21,7 @@ test('core navigation exposes saved plans and account settings', async ({ page }
   await expect(page.getByRole('link', { name: 'Privacy Notice' })).toBeVisible();
 });
 
-test('account modal separates login, signup, and recovery choices', async ({ page }) => {
+test('account modal separates social, email, signup, and recovery choices', async ({ page }, testInfo) => {
   await page.goto('/');
 
   const accountAccess = page.getByRole('button', { name: 'Log In / Sign Up' });
@@ -47,11 +47,10 @@ test('account modal separates login, signup, and recovery choices', async ({ pag
   await expect(
     dialog.getByRole('textbox', { name: 'Email', exact: true }),
   ).toHaveAttribute('autocomplete', 'email');
-  await expect(dialog.getByLabel('Password', { exact: true })).toHaveAttribute(
-    'autocomplete',
-    'current-password'
-  );
-  await expect(dialog.getByRole('button', { name: 'Log in' })).toBeEnabled();
+  await expect(dialog.getByLabel('Password', { exact: true })).toHaveCount(0);
+  await expect(
+    dialog.getByRole('button', { name: 'Continue with email' }),
+  ).toBeEnabled();
   await expect(dialog.getByRole('button', { name: 'Sign up' })).toBeVisible();
   await expect(dialog.getByText(/cognito|amazon cognito/i)).toHaveCount(0);
   await expect(dialog.getByText('Private by design')).toHaveCount(0);
@@ -60,30 +59,48 @@ test('account modal separates login, signup, and recovery choices', async ({ pag
   await expect(google).toBeEnabled();
   await expect(
     dialog.getByRole('button', { name: 'Sign in with Facebook' }),
-  ).toBeDisabled();
+  ).toBeEnabled();
   await expect(
     dialog.getByRole('button', { name: 'Sign in with Amazon' }),
-  ).toBeDisabled();
+  ).toBeEnabled();
   await expect(
     dialog.getByRole('button', { name: 'Sign in with Apple' }),
-  ).toBeDisabled();
+  ).toBeEnabled();
   await expect(
     dialog.getByRole('button', { name: /sign in with linkedin/i }),
   ).toHaveCount(0);
 
-  await dialog.getByRole('button', { name: 'Sign up' }).click();
-  await expect(
-    dialog.getByRole('heading', { name: 'Sign up for Crohn’s Buddy' }),
-  ).toBeVisible();
-  await expect(dialog.getByText('Request an invitation')).toBeVisible();
-  await expect(
-    dialog.getByText(/self-service registration is temporarily unavailable/i),
-  ).toBeVisible();
+  const socialPanel = dialog.locator('aside');
+  const emailPanel = dialog.locator('aside + div');
+  const socialBox = await socialPanel.boundingBox();
+  const emailBox = await emailPanel.boundingBox();
+  expect(socialBox).not.toBeNull();
+  expect(emailBox).not.toBeNull();
+  if (testInfo.project.name === 'mobile-chromium') {
+    expect(socialBox!.y).toBeLessThan(emailBox!.y);
+  } else {
+    expect(socialBox!.x).toBeLessThan(emailBox!.x);
+  }
 
-  await dialog.getByRole('button', { name: 'Back to login' }).click();
   await dialog.getByRole('button', { name: 'Forgot password?' }).click();
   await expect(dialog.getByRole('heading', { name: 'Reset your password' })).toBeVisible();
   await expect(dialog.getByRole('button', { name: 'Sign up' })).toBeVisible();
+
+  await dialog.getByRole('button', { name: 'Back to login' }).click();
+  await dialog.getByRole('button', { name: 'Sign up' }).click();
+  await expect(
+    dialog.getByRole('heading', { name: 'Create your account' }),
+  ).toBeVisible();
+  await expect(dialog.getByLabel('Password', { exact: true })).toHaveCount(0);
+  await expect(
+    dialog.getByRole('button', { name: 'Continue with email' }),
+  ).toBeEnabled();
+  await expect(
+    dialog.getByRole('button', { name: 'Sign up with Google' }),
+  ).toBeEnabled();
+  await expect(
+    dialog.getByRole('button', { name: 'Already have an account? Log in' }),
+  ).toBeVisible();
 });
 
 test('tab navigation supports keyboard focus and activation', async ({ page }) => {

@@ -1,0 +1,126 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: logto
+  labels:
+    app.kubernetes.io/part-of: crohns-buddy
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: logto
+  namespace: logto
+  labels:
+    app.kubernetes.io/name: logto
+    app.kubernetes.io/part-of: crohns-buddy
+spec:
+  replicas: 2
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxUnavailable: 0
+      maxSurge: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: logto
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: logto
+        app.kubernetes.io/part-of: crohns-buddy
+    spec:
+      securityContext:
+        seccompProfile:
+          type: RuntimeDefault
+      containers:
+        - name: logto
+          image: svhd/logto:1.43.0@sha256:41196a1fadbff35eae337965321c57946936755066bd92625ccf8a5b65d4b1be
+          imagePullPolicy: IfNotPresent
+          ports:
+            - name: http
+              containerPort: 3001
+            - name: admin
+              containerPort: 3002
+          envFrom:
+            - secretRef:
+                name: logto-runtime
+          env:
+            - name: TRUST_PROXY_HEADER
+              value: "1"
+            # Keep the administrative console off the public ALB. Operators
+            # access it through an authenticated kubectl port-forward.
+            - name: ADMIN_ENDPOINT
+              value: http://localhost:3002
+            - name: LOGTO_OSS_SURVEY_ENDPOINT
+              value: ""
+            - name: NODE_EXTRA_CA_CERTS
+              value: /etc/ssl/rds/us-east-1-bundle.pem
+          volumeMounts:
+            - name: rds-ca-bundle
+              mountPath: /etc/ssl/rds
+              readOnly: true
+          resources:
+            requests:
+              cpu: 500m
+              memory: 1Gi
+            limits:
+              cpu: "2"
+              memory: 4Gi
+          readinessProbe:
+            httpGet:
+              path: /status
+              port: http
+            initialDelaySeconds: 10
+            periodSeconds: 10
+            timeoutSeconds: 3
+            failureThreshold: 6
+          livenessProbe:
+            httpGet:
+              path: /status
+              port: http
+            initialDelaySeconds: 30
+            periodSeconds: 20
+            timeoutSeconds: 3
+            failureThreshold: 3
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop:
+                - ALL
+      volumes:
+        - name: rds-ca-bundle
+          configMap:
+            name: rds-ca-bundle
+      topologySpreadConstraints:
+        - maxSkew: 1
+          topologyKey: topology.kubernetes.io/zone
+          whenUnsatisfiable: ScheduleAnyway
+          labelSelector:
+            matchLabels:
+              app.kubernetes.io/name: logto
+---
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: logto
+  namespace: logto
+spec:
+  minAvailable: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: logto
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: logto
+  namespace: logto
+  labels:
+    app.kubernetes.io/name: logto
+spec:
+  selector:
+    app.kubernetes.io/name: logto
+  ports:
+    - name: http
+      port: 80
+      targetPort: http

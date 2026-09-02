@@ -1,17 +1,22 @@
 import { NextRequest, NextResponse } from 'next/server';
 
 import { authenticateCognitoSession } from '@/lib/server/cognitoAuth';
+import { configuredAuthProvider } from '@/lib/server/authProvider';
 import {
   clearAuthCookies,
   setAuthCookies,
 } from '@/lib/server/cognitoCookies';
+import { authenticateLogtoSession } from '@/lib/server/logtoAuth';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 
 export async function GET(request: NextRequest): Promise<NextResponse> {
   try {
-    const result = await authenticateCognitoSession(request, { allowRefresh: true });
+    const result =
+      configuredAuthProvider() === 'logto'
+        ? await authenticateLogtoSession(request, { allowRefresh: true })
+        : await authenticateCognitoSession(request, { allowRefresh: true });
     if (!result.ok) {
       const response = NextResponse.json(
         { authenticated: false },
@@ -47,4 +52,3 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
     );
   }
 }
-

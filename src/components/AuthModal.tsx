@@ -13,6 +13,7 @@ import GoogleSignInButton, {
 } from '@/components/auth/GoogleSignInButton';
 import {
   classifyAuthError,
+  continueWithEmail,
   confirmPasswordReset,
   confirmSignInMfa,
   confirmSignUp,
@@ -21,6 +22,7 @@ import {
   resendSignUpCode,
   signIn,
   signUp,
+  usesHostedAuth,
   type GoogleSignInOutcome,
 } from '@/lib/auth';
 
@@ -122,6 +124,7 @@ export default function AuthModal({
   const nameId = useId();
   const codeId = useId();
   const isSignup = mode === 'signup' && allowSignup;
+  const hostedAuth = usesHostedAuth();
   const socialProviders = RECOGNIZED_IDENTITY_PROVIDERS;
 
   const [view, setView] = useState<AuthView>(
@@ -185,6 +188,16 @@ export default function AuthModal({
   const handleCredentials = async (event: FormEvent) => {
     event.preventDefault();
     clearMessages();
+    if (hostedAuth) {
+      setPending(true);
+      try {
+        await continueWithEmail(email, isSignup ? 'signup' : 'signin');
+      } catch (requestError: unknown) {
+        setError(messageForError(requestError));
+        setPending(false);
+      }
+      return;
+    }
     if (isSignup && password !== confirmPassword) {
       setError('Passwords do not match.');
       return;
@@ -269,6 +282,7 @@ export default function AuthModal({
     setPending(true);
     try {
       await requestPasswordReset(email);
+      if (hostedAuth) return;
       setView('reset-password');
       setStatus(
         `If an account exists for ${email.trim()}, a reset code is on its way.`,
@@ -330,8 +344,12 @@ export default function AuthModal({
           : view === 'mfa'
             ? 'Verify and continue'
             : isSignup
-              ? 'Create account'
-              : 'Log in';
+              ? hostedAuth
+                ? 'Continue with email'
+                : 'Create account'
+              : hostedAuth
+                ? 'Continue with email'
+                : 'Log in';
 
   return (
     <div
@@ -448,8 +466,12 @@ export default function AuthModal({
                               : 'authenticator app'
                           }.`
                         : isSignup
-                          ? 'Save your plans and preferences securely across devices.'
-                          : 'Use your existing account, or choose Sign up below for new-account options.'}
+                          ? hostedAuth
+                            ? 'Enter your email to continue to secure account creation.'
+                            : 'Save your plans and preferences securely across devices.'
+                          : hostedAuth
+                            ? 'Enter your email to continue securely, or choose Sign up to create an account.'
+                            : 'Use your existing account, or choose Sign up below for new-account options.'}
               </p>
 
               {(error || status) && (
@@ -467,7 +489,7 @@ export default function AuthModal({
 
               {view === 'credentials' && (
                 <form onSubmit={handleCredentials} className="space-y-4">
-                  {isSignup && (
+                  {isSignup && !hostedAuth && (
                     <div>
                       <label htmlFor={nameId} className={labelClass}>
                         Display name
@@ -504,44 +526,46 @@ export default function AuthModal({
                     />
                   </div>
 
-                  <div>
-                    <label htmlFor={passwordId} className={labelClass}>
-                      Password
-                    </label>
-                    <div className="relative">
-                      <input
-                        id={passwordId}
-                        type={showPassword ? 'text' : 'password'}
-                        value={password}
-                        onChange={(event) => setPassword(event.target.value)}
-                        autoComplete={
-                          isSignup ? 'new-password' : 'current-password'
-                        }
-                        minLength={12}
-                        maxLength={256}
-                        required
-                        className={`${inputClass} pr-12`}
-                        placeholder="Enter your password"
-                      />
-                      <button
-                        type="button"
-                        onClick={() => setShowPassword((visible) => !visible)}
-                        className="absolute inset-y-0 right-0 flex w-12 items-center justify-center rounded-r-lg text-brand-800/45 hover:text-brand-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-brand-400"
-                        aria-label={
-                          showPassword ? 'Hide password' : 'Show password'
-                        }
-                      >
-                        <EyeIcon hidden={!showPassword} />
-                      </button>
+                  {!hostedAuth && (
+                    <div>
+                      <label htmlFor={passwordId} className={labelClass}>
+                        Password
+                      </label>
+                      <div className="relative">
+                        <input
+                          id={passwordId}
+                          type={showPassword ? 'text' : 'password'}
+                          value={password}
+                          onChange={(event) => setPassword(event.target.value)}
+                          autoComplete={
+                            isSignup ? 'new-password' : 'current-password'
+                          }
+                          minLength={12}
+                          maxLength={256}
+                          required
+                          className={`${inputClass} pr-12`}
+                          placeholder="Enter your password"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => setShowPassword((visible) => !visible)}
+                          className="absolute inset-y-0 right-0 flex w-12 items-center justify-center rounded-r-lg text-brand-800/45 hover:text-brand-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-brand-400"
+                          aria-label={
+                            showPassword ? 'Hide password' : 'Show password'
+                          }
+                        >
+                          <EyeIcon hidden={!showPassword} />
+                        </button>
+                      </div>
+                      {isSignup && (
+                        <p className="mt-1.5 text-xs leading-5 text-brand-800/45">
+                          {PASSWORD_GUIDANCE}
+                        </p>
+                      )}
                     </div>
-                    {isSignup && (
-                      <p className="mt-1.5 text-xs leading-5 text-brand-800/45">
-                        {PASSWORD_GUIDANCE}
-                      </p>
-                    )}
-                  </div>
+                  )}
 
-                  {isSignup && (
+                  {isSignup && !hostedAuth && (
                     <div>
                       <label htmlFor={confirmPasswordId} className={labelClass}>
                         Confirm password
@@ -647,7 +671,11 @@ export default function AuthModal({
                     disabled={pending}
                     className="btn-primary w-full rounded-lg"
                   >
-                    {pending ? 'Sending…' : primaryLabel}
+                    {pending
+                      ? 'Please wait…'
+                      : hostedAuth
+                        ? 'Continue to password recovery'
+                        : primaryLabel}
                   </button>
                 </form>
               )}

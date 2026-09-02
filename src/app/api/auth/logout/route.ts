@@ -7,7 +7,13 @@ import {
   readCognitoConfig,
   requestOrigin,
 } from '@/lib/server/cognitoAuth';
+import { configuredAuthProvider } from '@/lib/server/authProvider';
 import { clearAuthCookies, clearOAuthCookies } from '@/lib/server/cognitoCookies';
+import {
+  logtoLogoutUrl,
+  requestOriginForLogto,
+  revokeLogtoRefreshToken,
+} from '@/lib/server/logtoAuth';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -48,8 +54,14 @@ function clearAll(response: NextResponse): void {
 
 export async function POST(request: NextRequest): Promise<NextResponse> {
   try {
-    await revokeRefreshToken(request);
-    const response = NextResponse.json({ logoutUrl: managedLogoutUrl(request) });
+    const isLogto = configuredAuthProvider() === 'logto';
+    if (isLogto) await revokeLogtoRefreshToken(request);
+    else await revokeRefreshToken(request);
+    const response = NextResponse.json({
+      logoutUrl: isLogto
+        ? logtoLogoutUrl(requestOriginForLogto(request))
+        : managedLogoutUrl(request),
+    });
     clearAll(response);
     return response;
   } catch {
@@ -61,8 +73,14 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
 
 export async function GET(request: NextRequest): Promise<NextResponse> {
   try {
-    await revokeRefreshToken(request);
-    const response = NextResponse.redirect(managedLogoutUrl(request));
+    const isLogto = configuredAuthProvider() === 'logto';
+    if (isLogto) await revokeLogtoRefreshToken(request);
+    else await revokeRefreshToken(request);
+    const response = NextResponse.redirect(
+      isLogto
+        ? logtoLogoutUrl(requestOriginForLogto(request))
+        : managedLogoutUrl(request),
+    );
     clearAll(response);
     return response;
   } catch {
@@ -71,4 +89,3 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
     return response;
   }
 }
-

@@ -8,10 +8,16 @@ import {
   safeReturnTo,
   verifyCognitoTokenSet,
 } from '@/lib/server/cognitoAuth';
+import { configuredAuthProvider } from '@/lib/server/authProvider';
 import {
   clearOAuthCookies,
   setAuthCookies,
 } from '@/lib/server/cognitoCookies';
+import {
+  exchangeLogtoAuthorizationCode,
+  requestOriginForLogto,
+  verifyLogtoTokenSet,
+} from '@/lib/server/logtoAuth';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -44,17 +50,30 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
   if (!code) return errorRedirect(request, 'code');
 
   try {
-    const origin = requestOrigin(request);
-    const exchanged = await exchangeAuthorizationCode({
-      code,
-      codeVerifier: verifier,
-      redirectUri: `${origin}/api/auth/callback`,
-    });
+    const isLogto = configuredAuthProvider() === 'logto';
+    const origin = isLogto
+      ? requestOriginForLogto(request)
+      : requestOrigin(request);
+    const exchanged = await (isLogto
+      ? exchangeLogtoAuthorizationCode({
+          code,
+          codeVerifier: verifier,
+          redirectUri: `${origin}/api/auth/callback`,
+        })
+      : exchangeAuthorizationCode({
+          code,
+          codeVerifier: verifier,
+          redirectUri: `${origin}/api/auth/callback`,
+        }));
     if (!exchanged.ok) return errorRedirect(request, exchanged.kind);
 
-    const verified = await verifyCognitoTokenSet(exchanged.tokens, {
-      requireFreshRevocationCheck: true,
-    });
+    const verified = await (isLogto
+      ? verifyLogtoTokenSet(exchanged.tokens, {
+          requireFreshRevocationCheck: true,
+        })
+      : verifyCognitoTokenSet(exchanged.tokens, {
+          requireFreshRevocationCheck: true,
+        }));
     if (!verified.ok) return errorRedirect(request, verified.kind);
 
     const response = NextResponse.redirect(new URL(returnTo, origin));
@@ -66,4 +85,3 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
     return errorRedirect(request, 'unavailable');
   }
 }
-

@@ -27,7 +27,9 @@ import type {
   VerifiedIdentity,
 } from './authTokenVerifier';
 import { credentialErrorResponse, serviceUnavailableResponse } from './apiErrors';
+import { configuredAuthProvider } from './authProvider';
 import { cognitoAuthTokenVerifier } from './cognitoAuthTokenVerifier';
+import { logtoAuthTokenVerifier } from './logtoAuthTokenVerifier';
 
 /** What a wrapped handler receives in place of the raw route context. */
 export interface AuthenticatedContext {
@@ -180,7 +182,11 @@ export function withAuth(
   handler: AuthenticatedHandler,
   opts?: WithAuthOptions,
 ): RouteHandler {
-  const verifier = opts?.verifier ?? cognitoAuthTokenVerifier;
+  const verifier =
+    opts?.verifier ??
+    (configuredAuthProvider() === 'logto'
+      ? logtoAuthTokenVerifier
+      : cognitoAuthTokenVerifier);
   const requireFreshRevocationCheck = opts?.freshRevocationCheck === true;
 
   return async function authenticatedRoute(req: Request, ctx?: RouteContext): Promise<Response> {

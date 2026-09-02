@@ -96,4 +96,20 @@ describe('assertServerEnv', () => {
       missingCredentialGroups(['MEAL_PLAN_STORE', 'AUTH_SERVICE', 'MEAL_PLAN_STORE']),
     ).toEqual(['MEAL_PLAN_STORE', 'AUTH_SERVICE']);
   });
+
+  it('requires Logto settings instead of Cognito settings for Logto deployments', () => {
+    process.env = emptyEnv();
+    process.env.AUTH_PROVIDER = 'logto';
+    process.env.AUTH_ALLOWED_ORIGINS = 'https://www.crohns-buddy.com';
+    process.env.LOGTO_ENDPOINT = 'https://auth.crohns-buddy.com';
+    process.env.LOGTO_APP_ID = 'crohns-buddy-web';
+
+    expect(() => assertServerEnv(['AUTH_SERVICE'])).not.toThrow();
+
+    delete process.env.LOGTO_APP_ID;
+    expect(() => assertServerEnv(['AUTH_SERVICE'])).toThrow(/LOGTO_APP_ID/);
+    expect(() => assertServerEnv(['AUTH_SERVICE'])).not.toThrow(
+      /COGNITO_USER_POOL_ID/,
+    );
+  });
 });

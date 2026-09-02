@@ -1,0 +1,50 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: logto-database-migrate
+  namespace: logto
+  labels:
+    app.kubernetes.io/name: logto
+    app.kubernetes.io/part-of: crohns-buddy
+spec:
+  backoffLimit: 3
+  ttlSecondsAfterFinished: 86400
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: logto-database-migrate
+        app.kubernetes.io/part-of: crohns-buddy
+    spec:
+      restartPolicy: Never
+      containers:
+        - name: migrate
+          image: svhd/logto:1.43.0@sha256:41196a1fadbff35eae337965321c57946936755066bd92625ccf8a5b65d4b1be
+          command:
+            - npm
+            - run
+            - cli
+            - db
+            - seed
+            - --
+            - --swe
+          envFrom:
+            - secretRef:
+                name: logto-runtime
+          env:
+            - name: NODE_EXTRA_CA_CERTS
+              value: /etc/ssl/rds/us-east-1-bundle.pem
+          volumeMounts:
+            - name: rds-ca-bundle
+              mountPath: /etc/ssl/rds
+              readOnly: true
+          resources:
+            requests:
+              cpu: 250m
+              memory: 512Mi
+            limits:
+              cpu: "1"
+              memory: 2Gi
+      volumes:
+        - name: rds-ca-bundle
+          configMap:
+            name: rds-ca-bundle

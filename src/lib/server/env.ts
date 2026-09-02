@@ -29,6 +29,12 @@ export const REQUIRED: Record<CredentialGroup, string[]> = {
   MEAL_PLAN_STORE: ['MEAL_PLAN_TABLE_NAME', 'MEAL_PLAN_AWS_REGION'],
 };
 
+const LOGTO_AUTH_REQUIRED = [
+  'LOGTO_ENDPOINT',
+  'LOGTO_APP_ID',
+  'AUTH_ALLOWED_ORIGINS',
+] as const;
+
 const MEAL_PLAN_ACCESS_KEY = 'MEAL_PLAN_AWS_ACCESS_KEY_ID';
 const MEAL_PLAN_SECRET_KEY = 'MEAL_PLAN_AWS_SECRET_ACCESS_KEY';
 
@@ -41,6 +47,8 @@ function serverEnvValue(name: string): string | undefined {
   switch (name) {
     case 'AUTH_ALLOWED_ORIGINS':
       return process.env.AUTH_ALLOWED_ORIGINS;
+    case 'AUTH_PROVIDER':
+      return process.env.AUTH_PROVIDER;
     case 'COGNITO_AWS_REGION':
       return process.env.COGNITO_AWS_REGION;
     case 'COGNITO_CLIENT_ID':
@@ -49,6 +57,10 @@ function serverEnvValue(name: string): string | undefined {
       return process.env.COGNITO_DOMAIN;
     case 'COGNITO_USER_POOL_ID':
       return process.env.COGNITO_USER_POOL_ID;
+    case 'LOGTO_APP_ID':
+      return process.env.LOGTO_APP_ID;
+    case 'LOGTO_ENDPOINT':
+      return process.env.LOGTO_ENDPOINT;
     case 'MEAL_PLAN_AWS_ACCESS_KEY_ID':
       return process.env.MEAL_PLAN_AWS_ACCESS_KEY_ID;
     case 'MEAL_PLAN_AWS_REGION':
@@ -75,7 +87,12 @@ function isAbsent(name: string): boolean {
  * Returns the variables of `group` that are absent, in declaration order.
  */
 export function missingVariables(group: CredentialGroup): string[] {
-  const missing = REQUIRED[group].filter(isAbsent);
+  const required =
+    group === 'AUTH_SERVICE' &&
+    serverEnvValue('AUTH_PROVIDER')?.trim().toLowerCase() === 'logto'
+      ? LOGTO_AUTH_REQUIRED
+      : REQUIRED[group];
+  const missing = [...required].filter(isAbsent);
 
   if (group === 'MEAL_PLAN_STORE') {
     const accessKeyMissing = isAbsent(MEAL_PLAN_ACCESS_KEY);

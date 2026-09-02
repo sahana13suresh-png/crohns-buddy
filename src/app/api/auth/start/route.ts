@@ -8,6 +8,11 @@ import {
   safeReturnTo,
 } from '@/lib/server/cognitoAuth';
 import { setOAuthCookies } from '@/lib/server/cognitoCookies';
+import { configuredAuthProvider } from '@/lib/server/authProvider';
+import {
+  readLogtoConfig,
+  requestOriginForLogto,
+} from '@/lib/server/logtoAuth';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -18,6 +23,9 @@ function base64Url(bytes: Buffer): string {
 
 export function GET(request: NextRequest): NextResponse {
   try {
+    if (configuredAuthProvider() === 'logto') {
+      return startLogto(request);
+    }
     const config = readCognitoConfig();
     const origin = requestOrigin(request);
     const returnTo = safeReturnTo(request.nextUrl.searchParams.get('returnTo'));
@@ -72,4 +80,72 @@ export function GET(request: NextRequest): NextResponse {
       { status: 503, headers: { 'Cache-Control': 'no-store' } },
     );
   }
+}
+
+const LOGTO_PROVIDER_TARGETS: Record<string, string> = {
+  google: 'google',
+  facebook: 'facebook',
+  loginwithamazon: 'amazon',
+  amazon: 'amazon',
+  signinwithapple: 'apple',
+  apple: 'apple',
+};
+
+function startLogto(request: NextRequest): NextResponse {
+  const config = readLogtoConfig();
+  const origin = requestOriginForLogto(request);
+  const returnTo = safeReturnTo(request.nextUrl.searchParams.get('returnTo'));
+  const intent = request.nextUrl.searchParams.get('intent');
+  const providerRequest =
+    request.nextUrl.searchParams.get('provider')?.trim().toLowerCase() ?? '';
+  const providerTarget = providerRequest
+    ? LOGTO_PROVIDER_TARGETS[providerRequest]
+    : undefined;
+  if (
+    providerRequest &&
+    (!providerTarget || !config.socialProviders.includes(providerTarget))
+  ) {
+    return NextResponse.json(
+      { message: 'That sign-in provider is not enabled.' },
+      { status: 400, headers: { 'Cache-Control': 'no-store' } },
+    );
+  }
+
+  const state = base64Url(randomBytes(32));
+  const verifier = base64Url(randomBytes(64));
+  const challenge = createHash('sha256').update(verifier).digest('base64url');
+  const redirectUri = `${origin}/api/auth/callback`;
+  const authorizationUrl = new URL(`${config.issuer}/auth`);
+  authorizationUrl.search = new URLSearchParams({
+    client_id: config.clientId,
+    response_type: 'code',
+    scope: 'openid offline_access profile email',
+    redirect_uri: redirectUri,
+    state,
+    code_challenge_method: 'S256',
+    code_challenge: challenge,
+    first_screen:
+      intent === 'signup'
+        ? 'register'
+        : intent === 'recovery'
+          ? 'reset_password'
+          : 'sign_in',
+  }).toString();
+
+  const loginHint = request.nextUrl.searchParams.get('loginHint')?.trim();
+  if (loginHint) authorizationUrl.searchParams.set('login_hint', loginHint);
+  if (providerTarget) {
+    authorizationUrl.searchParams.set(
+      'direct_sign_in',
+      `social:${providerTarget}`,
+    );
+  }
+  if (request.nextUrl.searchParams.get('prompt') === 'login') {
+    authorizationUrl.searchParams.set('prompt', 'login');
+  }
+
+  const response = NextResponse.redirect(authorizationUrl);
+  response.headers.set('Cache-Control', 'no-store');
+  setOAuthCookies(response, { state, verifier, returnTo });
+  return response;
 }

@@ -1,5 +1,5 @@
 AWSTemplateFormatVersion: '2010-09-09'
-Description: Crohn's Buddy production hosting, Cognito authentication, data store, scheduled cleanup, and cost guardrail.
+Description: Crohn's Buddy production hosting, selectable Logto or Cognito authentication, data store, scheduled cleanup, and cost guardrail.
 
 Parameters:
   DeployHosting:
@@ -16,6 +16,26 @@ Parameters:
       - 'true'
       - 'false'
     Description: Explicit security gate for social federation, which can create new user profiles.
+  AuthProvider:
+    Type: String
+    Default: cognito
+    AllowedValues:
+      - cognito
+      - logto
+    Description: Authentication provider used by the application during the migration.
+  LogtoEndpoint:
+    Type: String
+    Default: https://auth.crohns-buddy.com
+  LogtoApplicationId:
+    Type: String
+    Default: ''
+  LogtoManagementApplicationId:
+    Type: String
+    Default: ''
+  LogtoManagementApplicationSecret:
+    Type: String
+    NoEcho: true
+    Default: ''
   RepositoryName:
     Type: String
     Default: crohns-buddy-deploy
@@ -95,6 +115,7 @@ Parameters:
 
 Conditions:
   HostingEnabled: !Equals [!Ref DeployHosting, 'true']
+  UseLogtoAuth: !Equals [!Ref AuthProvider, 'logto']
   HasAlertEmail: !Not [!Equals [!Ref AlertEmail, '']]
   HasGoogleProvider: !And
     - !Equals [!Ref EnableSocialIdentityProviders, 'true']
@@ -422,7 +443,7 @@ Resources:
             preBuild:
               commands:
                 - npm ci
-                - env | grep -E '^(MEAL_PLAN_TABLE_NAME|MEAL_PLAN_AWS_REGION|BEDROCK_MODEL_ID|BEDROCK_GUARDRAIL_|CRON_SECRET|PERSPECTIVE_API_KEY|NEXT_PUBLIC_AUTH_|COGNITO_|AUTH_ALLOWED_ORIGINS|AUTH_SOCIAL_PROVIDERS|AUTH_SELF_REGISTRATION_ENABLED)=' >> .env.production
+                - env | grep -E '^(MEAL_PLAN_TABLE_NAME|MEAL_PLAN_AWS_REGION|BEDROCK_MODEL_ID|BEDROCK_GUARDRAIL_|CRON_SECRET|PERSPECTIVE_API_KEY|NEXT_PUBLIC_AUTH_|AUTH_PROVIDER|LOGTO_|COGNITO_|AUTH_ALLOWED_ORIGINS|AUTH_SOCIAL_PROVIDERS|AUTH_SELF_REGISTRATION_ENABLED)=' >> .env.production
             build:
               commands:
                 - npm run build
@@ -451,8 +472,10 @@ Resources:
           Value: !Ref PerspectiveApiKey
         - Name: NEXT_PUBLIC_AUTH_ENABLED
           Value: 'true'
+        - Name: NEXT_PUBLIC_AUTH_FLOW
+          Value: redirect
         - Name: NEXT_PUBLIC_AUTH_SELF_REGISTRATION_ENABLED
-          Value: 'false'
+          Value: !If [UseLogtoAuth, 'true', 'false']
         - Name: NEXT_PUBLIC_AUTH_PROVIDERS
           Value: !Join
             - ','
@@ -468,6 +491,16 @@ Resources:
           Value: !Ref UserPoolClient
         - Name: COGNITO_DOMAIN
           Value: !Sub https://${CognitoDomainPrefix}.auth.${AWS::Region}.amazoncognito.com
+        - Name: AUTH_PROVIDER
+          Value: !Ref AuthProvider
+        - Name: LOGTO_ENDPOINT
+          Value: !Ref LogtoEndpoint
+        - Name: LOGTO_APP_ID
+          Value: !Ref LogtoApplicationId
+        - Name: LOGTO_MANAGEMENT_APP_ID
+          Value: !Ref LogtoManagementApplicationId
+        - Name: LOGTO_MANAGEMENT_APP_SECRET
+          Value: !Ref LogtoManagementApplicationSecret
         - Name: AUTH_ALLOWED_ORIGINS
           Value: !Join
             - ','
@@ -482,7 +515,7 @@ Resources:
               - !If [HasLoginWithAmazonProvider, LoginWithAmazon, '']
               - !If [HasAppleProvider, SignInWithApple, '']
         - Name: AUTH_SELF_REGISTRATION_ENABLED
-          Value: 'false'
+          Value: !If [UseLogtoAuth, 'true', 'false']
       Tags:
         - Key: application
           Value: crohns-buddy

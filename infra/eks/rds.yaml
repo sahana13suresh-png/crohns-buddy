@@ -1,0 +1,81 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: Multi-AZ PostgreSQL database for the Crohn's Buddy Logto deployment.
+
+Parameters:
+  VpcId:
+    Type: AWS::EC2::VPC::Id
+  PrivateSubnetIds:
+    Type: List<AWS::EC2::Subnet::Id>
+  EksClusterSecurityGroupId:
+    Type: AWS::EC2::SecurityGroup::Id
+
+Resources:
+  DatabaseSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: Allows PostgreSQL only from the Crohns Buddy EKS cluster.
+      VpcId: !Ref VpcId
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: 5432
+          ToPort: 5432
+          SourceSecurityGroupId: !Ref EksClusterSecurityGroupId
+      Tags:
+        - Key: application
+          Value: crohns-buddy
+        - Key: component
+          Value: logto
+
+  DatabaseSubnetGroup:
+    Type: AWS::RDS::DBSubnetGroup
+    Properties:
+      DBSubnetGroupDescription: Private subnets for the Crohn's Buddy Logto database.
+      SubnetIds: !Ref PrivateSubnetIds
+      Tags:
+        - Key: application
+          Value: crohns-buddy
+        - Key: component
+          Value: logto
+
+  Database:
+    Type: AWS::RDS::DBInstance
+    DeletionPolicy: Snapshot
+    UpdateReplacePolicy: Snapshot
+    Properties:
+      DBInstanceIdentifier: crohns-buddy-logto
+      Engine: postgres
+      DBName: logto
+      DBInstanceClass: db.t4g.medium
+      AllocatedStorage: 100
+      MaxAllocatedStorage: 500
+      StorageType: gp3
+      StorageEncrypted: true
+      MultiAZ: true
+      PubliclyAccessible: false
+      Port: 5432
+      MasterUsername: logto_admin
+      ManageMasterUserPassword: true
+      BackupRetentionPeriod: 14
+      CopyTagsToSnapshot: true
+      DeletionProtection: true
+      AutoMinorVersionUpgrade: true
+      EnablePerformanceInsights: true
+      PerformanceInsightsRetentionPeriod: 7
+      DBSubnetGroupName: !Ref DatabaseSubnetGroup
+      VPCSecurityGroups:
+        - !Ref DatabaseSecurityGroup
+      Tags:
+        - Key: application
+          Value: crohns-buddy
+        - Key: component
+          Value: logto
+
+Outputs:
+  DatabaseEndpoint:
+    Value: !GetAtt Database.Endpoint.Address
+  DatabasePort:
+    Value: !GetAtt Database.Endpoint.Port
+  DatabaseSecretArn:
+    Value: !GetAtt Database.MasterUserSecret.SecretArn
+  DatabaseSecurityGroupId:
+    Value: !Ref DatabaseSecurityGroup

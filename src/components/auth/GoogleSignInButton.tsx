@@ -277,7 +277,7 @@ export default function GoogleSignInButton({
       setPending(provider);
       let outcome: GoogleSignInOutcome;
       try {
-        outcome = await signInWithProvider(PROVIDER_NAMES[provider]);
+        outcome = await signInWithProvider(PROVIDER_NAMES[provider], intent);
       } catch {
         // Provider sign-in reports failures as outcomes, so a throw here is an
         // unexpected fault; it still must not leave the control stuck pending.
@@ -288,7 +288,7 @@ export default function GoogleSignInButton({
       setMessage(messageForProviderOutcome(outcome));
       onOutcome?.(outcome);
     },
-    [onOutcome]
+    [intent, onOutcome]
   );
 
   const verb = intent === 'signup' ? 'Sign up' : 'Sign in';

@@ -123,4 +123,57 @@ describe('GET /api/auth/start', () => {
     expect(response.status).toBe(503);
     expect(response.headers.get('location')).toBeNull();
   });
+
+  it('starts Logto registration on its dedicated first screen', () => {
+    process.env.AUTH_PROVIDER = 'logto';
+    process.env.LOGTO_ENDPOINT = 'https://auth.crohns-buddy.com';
+    process.env.LOGTO_APP_ID = 'crohns-buddy-web';
+    process.env.AUTH_SOCIAL_PROVIDERS = 'google,facebook,amazon,apple';
+
+    const response = GET(
+      new NextRequest(
+        'https://www.crohns-buddy.com/api/auth/start?intent=signup&loginHint=patient%40example.com&returnTo=%2Faccount',
+      ),
+    );
+
+    expect(response.status).toBe(307);
+    const location = new URL(response.headers.get('location')!);
+    expect(location.origin).toBe('https://auth.crohns-buddy.com');
+    expect(location.pathname).toBe('/oidc/auth');
+    expect(location.searchParams.get('client_id')).toBe('crohns-buddy-web');
+    expect(location.searchParams.get('first_screen')).toBe('register');
+    expect(location.searchParams.get('login_hint')).toBe('patient@example.com');
+    expect(location.searchParams.get('scope')).toContain('offline_access');
+    expect(response.cookies.get(AUTH_COOKIE_NAMES.oauthReturnTo)?.value).toBe(
+      '/account',
+    );
+  });
+
+  it('uses Logto direct social sign-in only for an enabled connector', async () => {
+    process.env.AUTH_PROVIDER = 'logto';
+    process.env.LOGTO_ENDPOINT = 'https://auth.crohns-buddy.com';
+    process.env.LOGTO_APP_ID = 'crohns-buddy-web';
+    process.env.AUTH_SOCIAL_PROVIDERS = 'google,facebook,amazon,apple';
+
+    const response = GET(
+      new NextRequest(
+        'https://www.crohns-buddy.com/api/auth/start?intent=signup&provider=LoginWithAmazon',
+      ),
+    );
+    const location = new URL(response.headers.get('location')!);
+
+    expect(location.searchParams.get('first_screen')).toBe('register');
+    expect(location.searchParams.get('direct_sign_in')).toBe('social:amazon');
+
+    process.env.AUTH_SOCIAL_PROVIDERS = 'google';
+    const blocked = GET(
+      new NextRequest(
+        'https://www.crohns-buddy.com/api/auth/start?provider=Facebook',
+      ),
+    );
+    expect(blocked.status).toBe(400);
+    await expect(blocked.json()).resolves.toEqual({
+      message: 'That sign-in provider is not enabled.',
+    });
+  });
 });

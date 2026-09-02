@@ -12,6 +12,7 @@ const authMocks = vi.hoisted(() => ({
   requestPasswordReset: vi.fn(),
   confirmPasswordReset: vi.fn(),
   confirmSignInMfa: vi.fn(),
+  continueWithEmail: vi.fn(),
   signInWithProvider: vi.fn(async () => ({ status: 'cancelled' as const })),
 }));
 
@@ -35,6 +36,7 @@ function renderModal(overrides: Partial<AuthModalProps> = {}) {
 beforeEach(() => {
   vi.clearAllMocks();
   vi.stubEnv('NEXT_PUBLIC_AUTH_PROVIDERS', 'google');
+  vi.stubEnv('NEXT_PUBLIC_AUTH_FLOW', 'password');
   authMocks.signIn.mockResolvedValue({ step: 'done' });
   authMocks.signUp.mockResolvedValue({ step: 'confirm-signup' });
   authMocks.confirmSignUp.mockResolvedValue({ step: 'sign-in' });
@@ -187,7 +189,28 @@ describe('account modal', () => {
     google.focus();
     await user.keyboard('{Enter}');
 
-    expect(authMocks.signInWithProvider).toHaveBeenCalledWith('Google');
+    expect(authMocks.signInWithProvider).toHaveBeenCalledWith('Google', 'signin');
+  });
+
+  it('uses the hosted email registration path without collecting a password locally', async () => {
+    const user = userEvent.setup();
+    vi.stubEnv('NEXT_PUBLIC_AUTH_FLOW', 'redirect');
+    renderModal({ mode: 'signup' });
+
+    expect(screen.queryByLabelText('Password')).not.toBeInTheDocument();
+    expect(
+      screen.getByRole('heading', { name: 'Create your account' }),
+    ).toBeVisible();
+
+    await user.type(screen.getByLabelText('Email'), 'new.patient@example.com');
+    await user.click(
+      screen.getByRole('button', { name: 'Continue with email' }),
+    );
+
+    expect(authMocks.continueWithEmail).toHaveBeenCalledWith(
+      'new.patient@example.com',
+      'signup',
+    );
   });
 
   it('switches modes, closes with Escape, and links to the privacy notice', async () => {

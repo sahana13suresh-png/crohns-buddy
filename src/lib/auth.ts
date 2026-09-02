@@ -95,6 +95,10 @@ export function isCognitoConfigured(): boolean {
   return process.env.NEXT_PUBLIC_AUTH_ENABLED === 'true';
 }
 
+export function usesHostedAuth(): boolean {
+  return process.env.NEXT_PUBLIC_AUTH_FLOW === 'redirect';
+}
+
 export function isSelfRegistrationEnabled(): boolean {
   return process.env.NEXT_PUBLIC_AUTH_SELF_REGISTRATION_ENABLED === 'true';
 }
@@ -324,10 +328,11 @@ export async function resetSignInFailures(email: string): Promise<void> {
 }
 
 export function authStartUrl(input: {
-  intent?: 'signin' | 'signup';
+  intent?: 'signin' | 'signup' | 'recovery';
   provider?: string;
   prompt?: 'login';
   returnTo?: string;
+  loginHint?: string;
 } = {}): string {
   const params = new URLSearchParams({
     intent: input.intent ?? 'signin',
@@ -335,6 +340,7 @@ export function authStartUrl(input: {
   });
   if (input.provider) params.set('provider', input.provider);
   if (input.prompt) params.set('prompt', input.prompt);
+  if (input.loginHint) params.set('loginHint', input.loginHint);
   return `/api/auth/start?${params.toString()}`;
 }
 
@@ -468,7 +474,35 @@ export async function confirmSignInMfa(code: string): Promise<PasswordAuthResult
 export async function requestPasswordReset(
   email = '',
 ): Promise<PasswordAuthResult> {
+  if (usesHostedAuth()) {
+    navigate(
+      authStartUrl({
+        intent: 'recovery',
+        loginHint: email.trim() || undefined,
+      }),
+    );
+    return new Promise<PasswordAuthResult>(() => undefined);
+  }
   return passwordAuthRequest({ action: 'forgot-password', email });
+}
+
+export async function continueWithEmail(
+  email: string,
+  intent: 'signin' | 'signup',
+): Promise<never> {
+  if (!isCognitoConfigured()) {
+    throw new AuthOperationError(
+      'auth/not-configured',
+      'Account features are not configured.',
+    );
+  }
+  navigate(
+    authStartUrl({
+      intent,
+      loginHint: email.trim() || undefined,
+    }),
+  );
+  return new Promise<never>(() => undefined);
 }
 
 export async function confirmPasswordReset(
@@ -534,11 +568,12 @@ export async function getIdTokenForRequest(): Promise<string | null> {
 
 export async function signInWithProvider(
   provider: SocialProviderName,
+  intent: 'signin' | 'signup' = 'signin',
 ): Promise<GoogleSignInOutcome> {
   if (!isCognitoConfigured()) {
     return { status: 'failed', code: 'auth/not-configured' };
   }
-  navigate(authStartUrl({ intent: 'signin', provider }));
+  navigate(authStartUrl({ intent, provider }));
   return { status: 'cancelled' };
 }
 
