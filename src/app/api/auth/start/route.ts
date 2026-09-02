@@ -124,12 +124,6 @@ function startLogto(request: NextRequest): NextResponse {
     state,
     code_challenge_method: 'S256',
     code_challenge: challenge,
-    first_screen:
-      intent === 'signup'
-        ? 'register'
-        : intent === 'recovery'
-          ? 'reset_password'
-          : 'sign_in',
   }).toString();
 
   const loginHint = request.nextUrl.searchParams.get('loginHint')?.trim();
@@ -138,6 +132,15 @@ function startLogto(request: NextRequest): NextResponse {
     authorizationUrl.searchParams.set(
       'direct_sign_in',
       `social:${providerTarget}`,
+    );
+  } else {
+    authorizationUrl.searchParams.set(
+      'first_screen',
+      intent === 'signup'
+        ? 'register'
+        : intent === 'recovery'
+          ? 'reset_password'
+          : 'sign_in',
     );
   }
   if (request.nextUrl.searchParams.get('prompt') === 'login') {

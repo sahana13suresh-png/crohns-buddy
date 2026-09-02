@@ -162,7 +162,7 @@ describe('GET /api/auth/start', () => {
     );
     const location = new URL(response.headers.get('location')!);
 
-    expect(location.searchParams.get('first_screen')).toBe('register');
+    expect(location.searchParams.has('first_screen')).toBe(false);
     expect(location.searchParams.get('direct_sign_in')).toBe('social:amazon');
 
     process.env.AUTH_SOCIAL_PROVIDERS = 'google';
