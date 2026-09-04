@@ -1,9 +1,10 @@
 // @vitest-environment node
 
-import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import {
   deriveLogtoDisplayName,
+  exchangeLogtoAuthorizationCode,
   logtoLogoutUrl,
   readLogtoConfig,
   requestOriginForLogto,
@@ -16,6 +17,7 @@ beforeEach(() => {
     ...originalEnv,
     LOGTO_ENDPOINT: 'https://auth.crohns-buddy.com/',
     LOGTO_APP_ID: 'crohns-buddy-web',
+    LOGTO_APP_SECRET: 'app-secret',
     AUTH_ALLOWED_ORIGINS:
       'https://www.crohns-buddy.com,https://www.crohns-buddy.com,not-an-origin',
     AUTH_SOCIAL_PROVIDERS: 'google,Facebook,amazon,apple,google',
@@ -23,6 +25,7 @@ beforeEach(() => {
 });
 
 afterEach(() => {
+  vi.unstubAllGlobals();
   process.env = originalEnv;
 });
 
@@ -32,6 +35,7 @@ describe('Logto authentication configuration', () => {
       endpoint: 'https://auth.crohns-buddy.com',
       issuer: 'https://auth.crohns-buddy.com/oidc',
       clientId: 'crohns-buddy-web',
+      clientSecret: 'app-secret',
       allowedOrigins: ['https://www.crohns-buddy.com'],
       socialProviders: ['google', 'facebook', 'amazon', 'apple'],
     });
@@ -85,5 +89,34 @@ describe('Logto authentication configuration', () => {
     expect(logout.searchParams.get('post_logout_redirect_uri')).toBe(
       'https://www.crohns-buddy.com/',
     );
+  });
+
+  it('authenticates authorization-code exchanges as the confidential web app', async () => {
+    const fetchMock = vi.fn().mockResolvedValue(
+      new Response(
+        JSON.stringify({
+          id_token: 'id-token',
+          access_token: 'access-token',
+          refresh_token: 'refresh-token',
+          expires_in: 3600,
+        }),
+        { status: 200, headers: { 'Content-Type': 'application/json' } },
+      ),
+    );
+    vi.stubGlobal('fetch', fetchMock);
+
+    await expect(
+      exchangeLogtoAuthorizationCode({
+        code: 'authorization-code',
+        codeVerifier: 'pkce-verifier',
+        redirectUri: 'https://www.crohns-buddy.com/api/auth/callback',
+      }),
+    ).resolves.toMatchObject({ ok: true });
+
+    const request = fetchMock.mock.calls[0]?.[1] as RequestInit;
+    const body = new URLSearchParams(String(request.body));
+    expect(body.get('client_id')).toBe('crohns-buddy-web');
+    expect(body.get('client_secret')).toBe('app-secret');
+    expect(body.get('code_verifier')).toBe('pkce-verifier');
   });
 });

@@ -125,6 +125,25 @@ describe('GET /api/auth/callback', () => {
     );
   });
 
+  it('uses the configured public origin for callback errors behind the hosting proxy', async () => {
+    const response = await GET(
+      new NextRequest(
+        'http://localhost:3000/api/auth/callback?code=code-1&state=wrong-state',
+        {
+          headers: {
+            host: 'localhost:3000',
+            'x-forwarded-host': 'www.crohns-buddy.com',
+            'x-forwarded-proto': 'https',
+          },
+        },
+      ),
+    );
+
+    expect(response.headers.get('location')).toBe(
+      'https://www.crohns-buddy.com/auth/error?reason=state',
+    );
+  });
+
   it('does not exchange a code after an identity-provider error', async () => {
     const response = await GET(
       callbackRequest('error=access_denied&state=state-1'),

@@ -32,6 +32,7 @@ export const REQUIRED: Record<CredentialGroup, string[]> = {
 const LOGTO_AUTH_REQUIRED = [
   'LOGTO_ENDPOINT',
   'LOGTO_APP_ID',
+  'LOGTO_APP_SECRET',
   'AUTH_ALLOWED_ORIGINS',
 ] as const;
 
@@ -59,6 +60,8 @@ function serverEnvValue(name: string): string | undefined {
       return process.env.COGNITO_USER_POOL_ID;
     case 'LOGTO_APP_ID':
       return process.env.LOGTO_APP_ID;
+    case 'LOGTO_APP_SECRET':
+      return process.env.LOGTO_APP_SECRET;
     case 'LOGTO_ENDPOINT':
       return process.env.LOGTO_ENDPOINT;
     case 'MEAL_PLAN_AWS_ACCESS_KEY_ID':

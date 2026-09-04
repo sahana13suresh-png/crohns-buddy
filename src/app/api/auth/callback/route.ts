@@ -23,8 +23,18 @@ export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 
 function errorRedirect(request: NextRequest, reason: string): NextResponse {
+  let origin = request.nextUrl.origin;
+  try {
+    origin =
+      configuredAuthProvider() === 'logto'
+        ? requestOriginForLogto(request)
+        : requestOrigin(request);
+  } catch {
+    // Fall back to the parsed request origin only when no configured public
+    // origin can be derived.
+  }
   const response = NextResponse.redirect(
-    new URL(`/auth/error?reason=${encodeURIComponent(reason)}`, request.url),
+    new URL(`/auth/error?reason=${encodeURIComponent(reason)}`, origin),
   );
   response.headers.set('Cache-Control', 'no-store');
   clearOAuthCookies(response);

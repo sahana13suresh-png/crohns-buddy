@@ -103,6 +103,7 @@ describe('assertServerEnv', () => {
     process.env.AUTH_ALLOWED_ORIGINS = 'https://www.crohns-buddy.com';
     process.env.LOGTO_ENDPOINT = 'https://auth.crohns-buddy.com';
     process.env.LOGTO_APP_ID = 'crohns-buddy-web';
+    process.env.LOGTO_APP_SECRET = 'app-secret';
 
     expect(() => assertServerEnv(['AUTH_SERVICE'])).not.toThrow();
 

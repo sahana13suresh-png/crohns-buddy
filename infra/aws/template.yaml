@@ -29,6 +29,10 @@ Parameters:
   LogtoApplicationId:
     Type: String
     Default: ''
+  LogtoApplicationSecret:
+    Type: String
+    NoEcho: true
+    Default: ''
   LogtoManagementApplicationId:
     Type: String
     Default: ''
@@ -497,6 +501,8 @@ Resources:
           Value: !Ref LogtoEndpoint
         - Name: LOGTO_APP_ID
           Value: !Ref LogtoApplicationId
+        - Name: LOGTO_APP_SECRET
+          Value: !Ref LogtoApplicationSecret
         - Name: LOGTO_MANAGEMENT_APP_ID
           Value: !Ref LogtoManagementApplicationId
         - Name: LOGTO_MANAGEMENT_APP_SECRET

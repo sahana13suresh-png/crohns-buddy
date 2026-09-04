@@ -10,6 +10,7 @@ describe('Amplify server runtime environment', () => {
         'AUTH_SELF_REGISTRATION_ENABLED',
         'AUTH_SOCIAL_PROVIDERS',
         'LOGTO_APP_ID',
+        'LOGTO_APP_SECRET',
         'LOGTO_ENDPOINT',
       ]),
     );

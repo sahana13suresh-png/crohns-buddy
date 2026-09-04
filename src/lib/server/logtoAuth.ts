@@ -20,6 +20,7 @@ export interface LogtoConfig {
   endpoint: string;
   issuer: string;
   clientId: string;
+  clientSecret: string;
   allowedOrigins: string[];
   socialProviders: string[];
 }
@@ -70,6 +71,7 @@ function normalizeOrigin(value: string): string | null {
 export function readLogtoConfig(): LogtoConfig {
   const endpoint = (process.env.LOGTO_ENDPOINT?.trim() ?? '').replace(/\/+$/, '');
   const clientId = process.env.LOGTO_APP_ID?.trim() ?? '';
+  const clientSecret = process.env.LOGTO_APP_SECRET?.trim() ?? '';
   const allowedOrigins = (process.env.AUTH_ALLOWED_ORIGINS?.trim() ?? '')
     .split(',')
     .map((value) => normalizeOrigin(value.trim()))
@@ -93,6 +95,7 @@ export function readLogtoConfig(): LogtoConfig {
     endpoint,
     issuer: `${endpoint}/oidc`,
     clientId,
+    clientSecret,
     allowedOrigins: Array.from(new Set(allowedOrigins)),
     socialProviders: Array.from(new Set(socialProviders)),
   };
@@ -293,6 +296,9 @@ async function tokenRequest(
   | { ok: true; tokens: LogtoTokenSet }
   | { ok: false; kind: 'invalid' | 'unavailable' }
 > {
+  if (config.clientSecret) {
+    form.set('client_secret', config.clientSecret);
+  }
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), AUTH_SERVICE_TIMEOUT_MS);
   try {
@@ -482,6 +488,7 @@ export async function revokeLogtoRefreshToken(request: Request): Promise<void> {
       headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
       body: new URLSearchParams({
         client_id: config.clientId,
+        client_secret: config.clientSecret,
         token: refreshToken,
       }),
       cache: 'no-store',
