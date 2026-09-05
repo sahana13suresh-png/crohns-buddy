@@ -40,6 +40,10 @@ Parameters:
     Type: String
     NoEcho: true
     Default: ''
+  LogtoSocialProviders:
+    Type: String
+    Default: google
+    Description: Comma-separated Logto social connector targets exposed by the application.
   RepositoryName:
     Type: String
     Default: crohns-buddy-deploy
@@ -456,11 +460,14 @@ Resources:
         - Name: NEXT_PUBLIC_AUTH_SELF_REGISTRATION_ENABLED
           Value: !If [UseLogtoAuth, 'true', 'false']
         - Name: NEXT_PUBLIC_AUTH_PROVIDERS
-          Value: !Join
-            - ','
-            - - !If [EnableGoogleInApp, google, '']
-              - !If [HasFacebookProvider, facebook, '']
-              - !If [HasAppleProvider, apple, '']
+          Value: !If
+            - UseLogtoAuth
+            - !Ref LogtoSocialProviders
+            - !Join
+              - ','
+              - - !If [EnableGoogleInApp, google, '']
+                - !If [HasFacebookProvider, facebook, '']
+                - !If [HasAppleProvider, apple, '']
         - Name: COGNITO_AWS_REGION
           Value: !Ref AWS::Region
         - Name: COGNITO_USER_POOL_ID
@@ -487,11 +494,14 @@ Resources:
             - - !Ref CustomDomainUrl
               - !Ref AmplifyProductionUrl
         - Name: AUTH_SOCIAL_PROVIDERS
-          Value: !Join
-            - ','
-            - - !If [EnableGoogleInApp, Google, '']
-              - !If [HasFacebookProvider, Facebook, '']
-              - !If [HasAppleProvider, SignInWithApple, '']
+          Value: !If
+            - UseLogtoAuth
+            - !Ref LogtoSocialProviders
+            - !Join
+              - ','
+              - - !If [EnableGoogleInApp, Google, '']
+                - !If [HasFacebookProvider, Facebook, '']
+                - !If [HasAppleProvider, SignInWithApple, '']
         - Name: AUTH_SELF_REGISTRATION_ENABLED
           Value: !If [UseLogtoAuth, 'true', 'false']
       Tags:
