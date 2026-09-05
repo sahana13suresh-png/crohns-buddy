@@ -10,11 +10,10 @@
  * browser half of that exchange, and it is deliberately stateless about the
  * request:
  *
- * - **Requirement 12.3** — the notice says the data is health-related, says it
- *   is stored in the cloud under this Account, and names the region. The region
- *   wording is the same as `/privacy` (`us-east-1`, US East, Northern Virginia)
- *   so the two surfaces cannot drift, and the notice links to `/privacy` for the
- *   longer version.
+ * - **Requirement 12.3** — the notice says the data is health-related, explains
+ *   that it will be added to this Account, describes its protection and
+ *   retention, and links to `/privacy` for the longer version. It deliberately
+ *   omits implementation vendors, products, regions, and service topology.
  * - **Requirement 12.5** — declining, closing with the × control, and pressing
  *   Escape are one path, `onDecline`. Nothing is written because nothing is
  *   resubmitted: the caller keeps the generated Meal_Plan in view and shows
@@ -30,12 +29,6 @@
 import { useEffect, useRef } from 'react';
 
 // ─── Copy (Requirements 12.3, 12.5) ────────────────────────────────────────────
-
-/** The AWS region identifier, matching `/privacy`. */
-export const STORAGE_REGION = 'us-east-1';
-
-/** The plain-language name of that region, matching `/privacy`. */
-export const STORAGE_REGION_LABEL = 'US East, Northern Virginia';
 
 /**
  * Requirement 12.5 — the message shown beside the retained Meal_Plan once the
@@ -126,15 +119,14 @@ export default function StorageNoticeDialog({
 
         <div id="storage-notice-body" className="space-y-4 text-sm text-brand-800/80">
           <p>
-            Saving this meal plan stores it in the cloud under your account. It
-            is health-related data: the plan is built from your quiz answers
-            about your symptoms, medications, allergies, and flare status.
+            Saving this meal plan adds it to your account. It is health-related
+            data: the plan is built from your quiz answers about your symptoms,
+            medications, allergies, and flare status.
           </p>
           <p>
-            Saved meal plans are stored in Amazon DynamoDB in the AWS region{' '}
-            <span className="font-semibold text-brand-700">{STORAGE_REGION}</span>{' '}
-            ({STORAGE_REGION_LABEL}). They are encrypted at rest and kept until
-            you delete them or delete your account.
+            Saved meal plans are encrypted while stored and while being sent.
+            They remain in your account until you delete them or delete your
+            account.
           </p>
           <p className="text-xs text-brand-800/50">
             <a
@@ -143,7 +135,7 @@ export default function StorageNoticeDialog({
             >
               Privacy Notice
             </a>
-            {' — the full detail on what we store and how to remove it.'}
+            {' — what we save, how it is protected, and how to remove it.'}
           </p>
         </div>
 

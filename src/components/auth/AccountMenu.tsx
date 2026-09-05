@@ -117,7 +117,7 @@ export default function AccountMenu() {
 
         {(status === 'unauthenticated' || status === 'expired') && !authConfigured && (
           <span className="text-xs text-brand-800/60">
-            Account features are not configured.
+            Account features are currently unavailable.
           </span>
         )}
       </nav>

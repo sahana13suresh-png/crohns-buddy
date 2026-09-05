@@ -324,7 +324,7 @@ export default function AccountSettingsPage({ deletionPorts }: AccountSettingsPa
         </button>
       ) : (
         <p className="text-sm text-brand-800/60">
-          Account features are not configured for this deployment.
+          Account features are currently unavailable.
         </p>
       )}
     </div>
@@ -347,8 +347,8 @@ export default function AccountSettingsPage({ deletionPorts }: AccountSettingsPa
       <h2 id="account-export">Your data</h2>
       <div className={CARD}>
         <p className="text-sm text-brand-800/70">
-          Download a single JSON file holding your account details, every meal plan saved to your
-          account, and the symptom tracker entries held in this browser.
+          Download a file containing your account details, every meal plan saved
+          to your account, and the symptom tracker entries held in this browser.
         </p>
 
         <button
@@ -393,8 +393,9 @@ export default function AccountSettingsPage({ deletionPorts }: AccountSettingsPa
         {deletion === null && (
           <>
             <p className="text-sm text-brand-800/70">
-              Deleting your account removes your saved meal plans from cloud storage, removes the
-              account itself, and clears the symptom tracker entries held in this browser.
+              Deleting your account removes every meal plan saved to it, removes
+              the account itself, and clears the symptom tracker entries held in
+              this browser.
             </p>
             {/* Requirement 11.1 — the control that starts the flow. */}
             <button type="button" onClick={startDeletion} className={SECONDARY_BUTTON}>

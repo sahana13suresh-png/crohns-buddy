@@ -6,9 +6,9 @@ import Link from 'next/link';
  *
  * - **Requirement 12.1** — names the health-related data a saved meal plan is
  *   derived from (symptom, medication, allergy, and flare-status quiz answers),
- *   names the cloud region the records live in, states that records are kept
- *   until the Patient deletes them or completes account deletion, and states
- *   how the export control and the deletion control are reached.
+ *   explains how records are protected, states that records are kept until the
+ *   Patient deletes them or completes account deletion, and states how the
+ *   export control and the deletion control are reached.
  * - **Requirement 12.2** — readable with no Session. This is a server
  *   component with no session hook, no `useSession()`, and no client bundle,
  *   so it renders identically for a signed-out visitor and a signed-in one.
@@ -16,15 +16,14 @@ import Link from 'next/link';
  * - **Requirement 12.10** — states that the Website gives no medical advice
  *   and that a clinician should be consulted before a diet change.
  *
- * The copy is deliberately literal about the region string and the control
- * names: these statements are the deliverable, and they are asserted directly
- * by the unit tests for this page.
+ * The copy describes privacy behavior in terms useful to a Patient without
+ * exposing implementation vendors, products, regions, or service topology.
  */
 
 export const metadata: Metadata = {
   title: "Privacy Notice - Crohn's Buddy",
   description:
-    "What health-related data Crohn's Buddy stores when you save a meal plan, where it is stored, how long it is kept, and how to remove it.",
+    "What information Crohn's Buddy saves, how it is protected, how long it is kept, and how to remove or download it.",
 };
 
 const SECTION_HEADING = 'mb-4';
@@ -41,9 +40,9 @@ export default function PrivacyNotice() {
         </h2>
         <div className={CARD}>
           <p>
-            When you save a meal plan to your account, we store that saved meal
-            plan in the cloud. Saved meal plans are derived from health-related
-            quiz answers you give the AI Meal Planner, covering your{' '}
+            When you save a meal plan, we add it to your account. Saved meal
+            plans are derived from health-related quiz answers you give the AI
+            Meal Planner, covering your{' '}
             <span className="font-semibold text-brand-700">symptoms</span>, your{' '}
             <span className="font-semibold text-brand-700">medications</span>,
             your{' '}
@@ -61,33 +60,27 @@ export default function PrivacyNotice() {
           </p>
           <p>
             Generating a meal plan does not require an account and does not
-            store anything. Nothing about a plan leaves your browser until you
-            activate the save control, and the first time you do we show a
-            notice naming the storage region and ask you to acknowledge it
-            before anything is written.
+            save it to an account. The first time you save a plan, we show a
+            notice explaining what will be saved and ask you to acknowledge it
+            before the plan is added to your account.
           </p>
           <p>
             Symptom Tracker entries are a separate case: they stay in your
-            browser on the device you entered them on, and they are never sent
-            to our cloud storage.
+            browser on the device where you entered them and are not included
+            with your online account.
           </p>
         </div>
       </section>
 
-      <section aria-labelledby="where-we-store-it">
-        <h2 id="where-we-store-it" className={SECTION_HEADING}>
-          Where we store it
+      <section aria-labelledby="how-we-protect-it">
+        <h2 id="how-we-protect-it" className={SECTION_HEADING}>
+          How we protect it
         </h2>
         <div className={CARD}>
           <p>
-            Saved meal plans are stored in Amazon DynamoDB in the AWS region{' '}
-            <span className="font-semibold text-brand-700">us-east-1</span> (US
-            East, Northern Virginia). That is the only region your saved meal
-            plans are held in.
-          </p>
-          <p>
-            Records are encrypted at rest in that region, and every page and API
-            request is served over HTTPS.
+            Saved meal plans are encrypted while stored and while being sent
+            between your browser and Crohn&apos;s Buddy. Access to saved plans
+            requires signing in to the account that owns them.
           </p>
           <p>
             We do not send meal plan content, quiz answers, email addresses, or
@@ -125,8 +118,8 @@ export default function PrivacyNotice() {
               </span>{' '}
               — open the AI Meal Planner while signed in, find the plan in your
               saved plans list, and activate the delete control on that plan.
-              You confirm the plan by title, and the record is removed from
-              cloud storage.
+              You confirm the plan by title, and it is removed from your
+              account.
             </li>
             <li>
               <span className="font-semibold text-brand-700">
@@ -146,9 +139,9 @@ export default function PrivacyNotice() {
               — the export control sits in the same account settings view,
               reached from the account menu in the page header while signed in,
               and it is also offered inside the deletion flow so you can take a
-              copy before anything is removed. It downloads a single JSON file
-              containing your account details, your saved meal plans, and the
-              Symptom Tracker entries held in this browser.
+              copy before anything is removed. It downloads a file containing
+              your account details, your saved meal plans, and the Symptom
+              Tracker entries held in this browser.
             </li>
           </ul>
         </div>

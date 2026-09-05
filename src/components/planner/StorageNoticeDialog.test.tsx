@@ -5,8 +5,6 @@ import StorageNoticeDialog, {
   ACKNOWLEDGE_LABEL,
   DECLINE_LABEL,
   STORAGE_NOTICE_DECLINED_MESSAGE,
-  STORAGE_REGION,
-  STORAGE_REGION_LABEL,
 } from './StorageNoticeDialog';
 
 const onAcknowledge = vi.fn();
@@ -27,17 +25,20 @@ describe('StorageNoticeDialog', () => {
     vi.clearAllMocks();
   });
 
-  // Requirement 12.3 — the notice says the data is health-related, says it is
-  // stored in the cloud under the Account, and names the region.
-  it('names the storage region and states that the data is health-related', () => {
+  // Requirement 12.3 — explain what is saved, how it is protected, and how
+  // long it is kept without exposing infrastructure details.
+  it('explains the health-related data, protection, and retention in user terms', () => {
     renderDialog();
 
     const dialog = screen.getByRole('dialog');
     expect(dialog).toHaveAttribute('aria-modal', 'true');
-    expect(dialog).toHaveTextContent(STORAGE_REGION);
-    expect(dialog).toHaveTextContent(STORAGE_REGION_LABEL);
     expect(dialog).toHaveTextContent(/health-related data/i);
-    expect(dialog).toHaveTextContent(/in the cloud under your account/i);
+    expect(dialog).toHaveTextContent(/adds it to your account/i);
+    expect(dialog).toHaveTextContent(/encrypted while stored and while being sent/i);
+    expect(dialog).toHaveTextContent(/until you delete them or delete your account/i);
+    expect(dialog).not.toHaveTextContent(
+      /Amazon|AWS|DynamoDB|us-east-1|Northern Virginia|cloud storage/i
+    );
   });
 
   it('labels the dialog by its heading and links to the Privacy Notice', () => {
