@@ -123,6 +123,12 @@ describe('GET /api/auth/callback', () => {
     expect(response.headers.get('set-cookie')).toContain(
       `${AUTH_COOKIE_NAMES.oauthState}=`,
     );
+    expect(response.headers.get('set-cookie')).toContain(
+      `${AUTH_COOKIE_NAMES.idToken}=`,
+    );
+    expect(response.headers.get('set-cookie')).toContain(
+      `${AUTH_COOKIE_NAMES.accessToken}=`,
+    );
   });
 
   it('uses the configured public origin for callback errors behind the hosting proxy', async () => {
@@ -166,6 +172,6 @@ describe('GET /api/auth/callback', () => {
     expect(response.headers.get('location')).toContain(
       '/auth/error?reason=invalid',
     );
-    expect(response.cookies.get(AUTH_COOKIE_NAMES.idToken)).toBeUndefined();
+    expect(response.cookies.get(AUTH_COOKIE_NAMES.idToken)?.value).toBe('');
   });
 });

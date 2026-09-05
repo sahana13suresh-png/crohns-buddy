@@ -10,6 +10,7 @@ import {
 } from '@/lib/server/cognitoAuth';
 import { configuredAuthProvider } from '@/lib/server/authProvider';
 import {
+  clearAuthCookies,
   clearOAuthCookies,
   setAuthCookies,
 } from '@/lib/server/cognitoCookies';
@@ -37,6 +38,7 @@ function errorRedirect(request: NextRequest, reason: string): NextResponse {
     new URL(`/auth/error?reason=${encodeURIComponent(reason)}`, origin),
   );
   response.headers.set('Cache-Control', 'no-store');
+  clearAuthCookies(response);
   clearOAuthCookies(response);
   return response;
 }

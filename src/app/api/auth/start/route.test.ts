@@ -145,6 +145,7 @@ describe('GET /api/auth/start', () => {
     expect(location.searchParams.get('login_hint')).toBe('patient@example.com');
     expect(location.searchParams.get('scope')).toContain('offline_access');
     expect(location.searchParams.get('max_age')).toBe('86400');
+    expect(location.searchParams.get('prompt')).toBe('login');
     expect(response.cookies.get(AUTH_COOKIE_NAMES.oauthReturnTo)?.value).toBe(
       '/account',
     );
@@ -166,6 +167,7 @@ describe('GET /api/auth/start', () => {
     expect(location.searchParams.has('first_screen')).toBe(false);
     expect(location.searchParams.get('direct_sign_in')).toBe('social:amazon');
     expect(location.searchParams.get('max_age')).toBe('86400');
+    expect(location.searchParams.get('prompt')).toBe('login');
 
     process.env.AUTH_SOCIAL_PROVIDERS = 'google';
     const blocked = GET(

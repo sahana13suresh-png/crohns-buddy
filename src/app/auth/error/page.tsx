@@ -22,9 +22,20 @@ export default async function AuthErrorPage({
         <p className="text-xs uppercase tracking-widest text-brand-400">Secure account</p>
         <h1 className="text-3xl">We couldn&apos;t sign you in</h1>
         <p className="text-brand-800/70">{message} No password or account data was stored.</p>
-        <Link href="/" className="btn-primary inline-flex">
-          Return to Crohn&apos;s Buddy
-        </Link>
+        <div className="flex flex-wrap gap-3">
+          <Link
+            href="/api/auth/start?intent=signup&prompt=login"
+            className="btn-primary inline-flex"
+          >
+            Try sign up again
+          </Link>
+          <Link
+            href="/"
+            className="inline-flex items-center px-4 py-3 text-brand-800/70"
+          >
+            Return home
+          </Link>
+        </div>
       </section>
     </main>
   );

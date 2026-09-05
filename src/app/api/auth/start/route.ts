@@ -150,7 +150,13 @@ function startLogto(request: NextRequest): NextResponse {
           : 'sign_in',
     );
   }
-  if (request.nextUrl.searchParams.get('prompt') === 'login') {
+  // Registration must never silently reuse an existing Logto session. A stale
+  // session can otherwise complete the authorization request as an old user
+  // instead of presenting a fresh registration flow.
+  if (
+    intent === 'signup' ||
+    request.nextUrl.searchParams.get('prompt') === 'login'
+  ) {
     authorizationUrl.searchParams.set('prompt', 'login');
   }
 
