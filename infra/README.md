@@ -38,7 +38,7 @@ branded account interface. Passwords are used only for the requested account ope
 are never persisted by the application. ID, access, and refresh tokens are stored in
 Secure, HttpOnly cookies.
 
-Google, Facebook, and Sign in with Apple are optional because each
+Google and Facebook are optional because each
 provider requires its own application credentials. Configure this authorized redirect URI
 in each provider:
 
@@ -51,7 +51,6 @@ Then export the matching credential pair before deploying:
 ```text
 GOOGLE_OAUTH_CLIENT_ID / GOOGLE_OAUTH_CLIENT_SECRET
 FACEBOOK_APP_ID / FACEBOOK_APP_SECRET
-APPLE_SERVICES_ID / APPLE_TEAM_ID / APPLE_KEY_ID / APPLE_PRIVATE_KEY
 ```
 
 Social federation is also protected by the `EnableSocialIdentityProviders` security gate,

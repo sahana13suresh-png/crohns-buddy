@@ -39,7 +39,6 @@ import {
 export const RECOGNIZED_IDENTITY_PROVIDERS = [
   'google',
   'facebook',
-  'apple',
 ] as const;
 
 export type IdentityProviderId = (typeof RECOGNIZED_IDENTITY_PROVIDERS)[number];
@@ -109,13 +108,11 @@ export function messageForProviderOutcome(outcome: GoogleSignInOutcome): string 
 const PROVIDER_NAMES: Record<IdentityProviderId, SocialProviderName> = {
   google: 'Google',
   facebook: 'Facebook',
-  apple: 'SignInWithApple',
 };
 
 const PROVIDER_LABELS: Record<IdentityProviderId, string> = {
   google: 'Google',
   facebook: 'Facebook',
-  apple: 'Apple',
 };
 
 /** Google's mark, decorative: the button's visible text carries the label. */
@@ -159,26 +156,9 @@ function FacebookMark(): ReactElement {
   );
 }
 
-function AppleMark(): ReactElement {
-  return (
-    <svg
-      className="h-5 w-5 shrink-0"
-      viewBox="0 0 24 24"
-      aria-hidden="true"
-      focusable="false"
-    >
-      <path
-        d="M16.73 12.54c.02 2.12 1.86 2.83 1.88 2.84-.02.05-.29 1-1 1.99-.61.85-1.25 1.7-2.25 1.72-.98.02-1.3-.58-2.43-.58-1.12 0-1.48.56-2.41.6-.97.04-1.7-.96-2.32-1.8-1.26-1.82-2.22-5.14-.93-7.38a3.61 3.61 0 013.08-1.86c.96-.02 1.87.65 2.43.65.56 0 1.62-.8 2.73-.69.46.02 1.76.19 2.6 1.41-.07.04-1.55.9-1.53 2.69zm-1.95-5.67c.51-.62.86-1.48.76-2.34-.74.03-1.64.5-2.17 1.11-.47.55-.89 1.43-.77 2.27.83.06 1.67-.42 2.18-1.04z"
-        fill="#111827"
-      />
-    </svg>
-  );
-}
-
 const PROVIDER_MARKS: Record<IdentityProviderId, () => ReactElement> = {
   google: GoogleMark,
   facebook: FacebookMark,
-  apple: AppleMark,
 };
 
 // ─── Component ─────────────────────────────────────────────────────────────────

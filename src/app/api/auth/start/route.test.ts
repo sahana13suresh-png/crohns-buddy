@@ -86,7 +86,7 @@ describe('GET /api/auth/start', () => {
     expect(location.searchParams.get('identity_provider')).toBe('Google');
   });
 
-  it.each(['Facebook', 'SignInWithApple'])(
+  it.each(['Facebook'])(
     'preserves the Cognito provider identifier for %s',
     (provider) => {
       process.env.AUTH_SOCIAL_PROVIDERS = provider;
@@ -128,7 +128,7 @@ describe('GET /api/auth/start', () => {
     process.env.AUTH_PROVIDER = 'logto';
     process.env.LOGTO_ENDPOINT = 'https://auth.crohns-buddy.com';
     process.env.LOGTO_APP_ID = 'crohns-buddy-web';
-    process.env.AUTH_SOCIAL_PROVIDERS = 'google,facebook,apple';
+    process.env.AUTH_SOCIAL_PROVIDERS = 'google,facebook';
 
     const response = GET(
       new NextRequest(
@@ -155,17 +155,17 @@ describe('GET /api/auth/start', () => {
     process.env.AUTH_PROVIDER = 'logto';
     process.env.LOGTO_ENDPOINT = 'https://auth.crohns-buddy.com';
     process.env.LOGTO_APP_ID = 'crohns-buddy-web';
-    process.env.AUTH_SOCIAL_PROVIDERS = 'google,facebook,apple';
+    process.env.AUTH_SOCIAL_PROVIDERS = 'google,facebook';
 
     const response = GET(
       new NextRequest(
-        'https://www.crohns-buddy.com/api/auth/start?intent=signup&provider=SignInWithApple',
+        'https://www.crohns-buddy.com/api/auth/start?intent=signup&provider=Facebook',
       ),
     );
     const location = new URL(response.headers.get('location')!);
 
     expect(location.searchParams.has('first_screen')).toBe(false);
-    expect(location.searchParams.get('direct_sign_in')).toBe('social:apple');
+    expect(location.searchParams.get('direct_sign_in')).toBe('social:facebook');
     expect(location.searchParams.get('max_age')).toBe('86400');
     expect(location.searchParams.get('prompt')).toBe('login');
 

@@ -85,8 +85,6 @@ export function GET(request: NextRequest): NextResponse {
 const LOGTO_PROVIDER_TARGETS: Record<string, string> = {
   google: 'google',
   facebook: 'facebook',
-  signinwithapple: 'apple',
-  apple: 'apple',
 };
 
 // Logto 1.43 only includes the OIDC auth_time claim when max_age is requested.

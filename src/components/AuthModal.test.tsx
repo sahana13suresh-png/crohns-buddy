@@ -177,10 +177,10 @@ describe('account modal', () => {
       screen.getByRole('button', { name: 'Sign in with Facebook' }),
     ).toBeDisabled();
     expect(
-      screen.getByRole('button', { name: 'Sign in with Apple' }),
-    ).toBeDisabled();
-    expect(
       screen.queryByRole('button', { name: 'Sign in with Amazon' }),
+    ).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole('button', { name: 'Sign in with Apple' }),
     ).not.toBeInTheDocument();
     expect(
       screen.queryByRole('button', { name: /linkedin/i }),

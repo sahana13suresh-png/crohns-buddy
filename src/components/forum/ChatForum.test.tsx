@@ -17,8 +17,7 @@ const signInWithProvider =
     (
       provider:
         | 'Google'
-        | 'Facebook'
-        | 'SignInWithApple',
+        | 'Facebook',
     ) => Promise<GoogleSignInOutcome>
   >();
 const signOut = vi.fn<() => Promise<void>>();
@@ -28,8 +27,7 @@ vi.mock('@/lib/auth', () => ({
   signInWithProvider: (
     provider:
       | 'Google'
-      | 'Facebook'
-      | 'SignInWithApple',
+      | 'Facebook',
   ) => signInWithProvider(provider),
   signOut: () => signOut(),
   onAuthChange: (callback: (session: AuthSession | null) => void) => {

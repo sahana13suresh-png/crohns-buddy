@@ -65,7 +65,7 @@ test('account modal separates social, email, signup, and recovery choices', asyn
   ).toHaveCount(0);
   await expect(
     dialog.getByRole('button', { name: 'Sign in with Apple' }),
-  ).toBeEnabled();
+  ).toHaveCount(0);
   await expect(
     dialog.getByRole('button', { name: /sign in with linkedin/i }),
   ).toHaveCount(0);

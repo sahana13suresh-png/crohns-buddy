@@ -32,8 +32,7 @@ export type GoogleSignInOutcome =
 
 export type SocialProviderName =
   | 'Google'
-  | 'Facebook'
-  | 'SignInWithApple';
+  | 'Facebook';
 
 export type AuthErrorKind =
   | 'email-already-in-use'

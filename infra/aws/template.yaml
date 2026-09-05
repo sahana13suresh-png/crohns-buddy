@@ -96,19 +96,6 @@ Parameters:
   FacebookApiVersion:
     Type: String
     Default: v21.0
-  AppleServicesId:
-    Type: String
-    Default: ''
-  AppleTeamId:
-    Type: String
-    Default: ''
-  AppleKeyId:
-    Type: String
-    Default: ''
-  ApplePrivateKey:
-    Type: String
-    NoEcho: true
-    Default: ''
   PerspectiveApiKey:
     Type: String
     NoEcho: true
@@ -129,13 +116,6 @@ Conditions:
     - !Equals [!Ref EnableSocialIdentityProviders, 'true']
     - !Not [!Equals [!Ref FacebookClientId, '']]
     - !Not [!Equals [!Ref FacebookClientSecret, '']]
-  HasAppleProvider: !And
-    - !Equals [!Ref EnableSocialIdentityProviders, 'true']
-    - !Not [!Equals [!Ref AppleServicesId, '']]
-    - !Not [!Equals [!Ref AppleTeamId, '']]
-    - !Not [!Equals [!Ref AppleKeyId, '']]
-    - !Not [!Equals [!Ref ApplePrivateKey, '']]
-
 Resources:
   SourceRepository:
     Type: AWS::CodeCommit::Repository
@@ -252,24 +232,6 @@ Resources:
         name: name
         username: id
 
-  AppleIdentityProvider:
-    Type: AWS::Cognito::UserPoolIdentityProvider
-    Condition: HasAppleProvider
-    Properties:
-      ProviderName: SignInWithApple
-      ProviderType: SignInWithApple
-      UserPoolId: !Ref UserPool
-      ProviderDetails:
-        client_id: !Ref AppleServicesId
-        team_id: !Ref AppleTeamId
-        key_id: !Ref AppleKeyId
-        private_key: !Ref ApplePrivateKey
-        authorize_scopes: email name
-      AttributeMapping:
-        email: email
-        name: name
-        username: sub
-
   UserPoolClient:
     Type: AWS::Cognito::UserPoolClient
     Properties:
@@ -296,7 +258,6 @@ Resources:
         - COGNITO
         - !If [HasGoogleProvider, !Ref GoogleIdentityProvider, !Ref 'AWS::NoValue']
         - !If [HasFacebookProvider, !Ref FacebookIdentityProvider, !Ref 'AWS::NoValue']
-        - !If [HasAppleProvider, !Ref AppleIdentityProvider, !Ref 'AWS::NoValue']
       PreventUserExistenceErrors: ENABLED
       EnableTokenRevocation: true
       AccessTokenValidity: 60
@@ -467,7 +428,6 @@ Resources:
               - ','
               - - !If [EnableGoogleInApp, google, '']
                 - !If [HasFacebookProvider, facebook, '']
-                - !If [HasAppleProvider, apple, '']
         - Name: COGNITO_AWS_REGION
           Value: !Ref AWS::Region
         - Name: COGNITO_USER_POOL_ID
@@ -501,7 +461,6 @@ Resources:
               - ','
               - - !If [EnableGoogleInApp, Google, '']
                 - !If [HasFacebookProvider, Facebook, '']
-                - !If [HasAppleProvider, SignInWithApple, '']
         - Name: AUTH_SELF_REGISTRATION_ENABLED
           Value: !If [UseLogtoAuth, 'true', 'false']
       Tags:
@@ -627,5 +586,3 @@ Outputs:
     Value: !If [HasGoogleProvider, ENABLED, AWAITING_PROVIDER_CREDENTIALS]
   FacebookSocialLoginStatus:
     Value: !If [HasFacebookProvider, ENABLED, AWAITING_PROVIDER_CREDENTIALS]
-  AppleSocialLoginStatus:
-    Value: !If [HasAppleProvider, ENABLED, AWAITING_PROVIDER_CREDENTIALS]
