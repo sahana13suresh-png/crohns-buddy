@@ -961,7 +961,6 @@ const RECOGNIZED_PROVIDERS: readonly Property23ProviderId[] =
 const PROVIDER_LABELS: Record<Property23ProviderId, string> = {
   google: 'Google',
   facebook: 'Facebook',
-  amazon: 'Amazon',
   apple: 'Apple',
 };
 

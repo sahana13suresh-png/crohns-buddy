@@ -15,7 +15,7 @@ export default defineConfig({
     ? undefined
     : {
       command:
-          'NEXT_PUBLIC_AUTH_ENABLED=true NEXT_PUBLIC_AUTH_FLOW=redirect NEXT_PUBLIC_AUTH_SELF_REGISTRATION_ENABLED=true NEXT_PUBLIC_AUTH_PROVIDERS=google,facebook,amazon,apple AUTH_PROVIDER=logto LOGTO_ENDPOINT=https://auth.crohns-buddy.com LOGTO_APP_ID=test-client LOGTO_APP_SECRET=test-secret AUTH_ALLOWED_ORIGINS=http://127.0.0.1:3000 AUTH_SOCIAL_PROVIDERS=google,facebook,amazon,apple npm run dev -- --hostname 127.0.0.1',
+          'NEXT_PUBLIC_AUTH_ENABLED=true NEXT_PUBLIC_AUTH_FLOW=redirect NEXT_PUBLIC_AUTH_SELF_REGISTRATION_ENABLED=true NEXT_PUBLIC_AUTH_PROVIDERS=google,facebook,apple AUTH_PROVIDER=logto LOGTO_ENDPOINT=https://auth.crohns-buddy.com LOGTO_APP_ID=test-client LOGTO_APP_SECRET=test-secret AUTH_ALLOWED_ORIGINS=http://127.0.0.1:3000 AUTH_SOCIAL_PROVIDERS=google,facebook,apple npm run dev -- --hostname 127.0.0.1',
         url: 'http://127.0.0.1:3000',
         reuseExistingServer: !process.env.CI,
         timeout: 120_000,

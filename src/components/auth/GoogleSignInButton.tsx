@@ -39,7 +39,6 @@ import {
 export const RECOGNIZED_IDENTITY_PROVIDERS = [
   'google',
   'facebook',
-  'amazon',
   'apple',
 ] as const;
 
@@ -110,14 +109,12 @@ export function messageForProviderOutcome(outcome: GoogleSignInOutcome): string 
 const PROVIDER_NAMES: Record<IdentityProviderId, SocialProviderName> = {
   google: 'Google',
   facebook: 'Facebook',
-  amazon: 'LoginWithAmazon',
   apple: 'SignInWithApple',
 };
 
 const PROVIDER_LABELS: Record<IdentityProviderId, string> = {
   google: 'Google',
   facebook: 'Facebook',
-  amazon: 'Amazon',
   apple: 'Apple',
 };
 
@@ -162,30 +159,6 @@ function FacebookMark(): ReactElement {
   );
 }
 
-function AmazonMark(): ReactElement {
-  return (
-    <svg
-      className="h-5 w-5 shrink-0"
-      viewBox="0 0 24 24"
-      aria-hidden="true"
-      focusable="false"
-    >
-      <path
-        d="M15.7 16.8c-4.15 1.93-6.73.32-8.38-.68-.26-.16-.7.04-.32.48 1.38 1.67 5.9 3.02 9.29.66.56-.39-.03-.72-.59-.46z"
-        fill="#FF9900"
-      />
-      <path
-        d="M17.27 15.92c-.42-.54-2.8-.26-3.86-.13-.32.04-.37-.24-.08-.44 1.88-1.32 4.96-.94 5.32-.5.36.45-.1 3.53-1.86 5-.27.23-.53.1-.41-.19.4-.96 1.31-3.2.89-3.74z"
-        fill="#FF9900"
-      />
-      <path
-        d="M13.5 14.08c-.9.67-2.2 1.03-3.27 1.03-1.82 0-3.43-.9-3.43-2.7 0-1.42.77-2.39 1.87-2.86.95-.42 2.28-.49 3.3-.6v-.2c0-.38.03-.82-.19-1.15-.2-.29-.59-.41-.93-.41-.63 0-1.2.33-1.34 1l-2.14-.23c.18-1.04.76-1.83 1.53-2.34.77-.5 1.77-.68 2.7-.68 1.2 0 2.77.32 3.42 1.23.6.84.54 1.96.54 3.18v2.89c0 .87.36 1.25.7 1.72l-1.9 1.65c-.27-.24-.53-.5-.86-1.53zm-1.53-3.24c-1.02 0-2.1.22-2.1 1.42 0 .61.32 1.02.88 1.02.42 0 .82-.26 1.07-.68.31-.51.29-1 .29-1.58v-.18h-.14z"
-        fill="#111827"
-      />
-    </svg>
-  );
-}
-
 function AppleMark(): ReactElement {
   return (
     <svg
@@ -205,7 +178,6 @@ function AppleMark(): ReactElement {
 const PROVIDER_MARKS: Record<IdentityProviderId, () => ReactElement> = {
   google: GoogleMark,
   facebook: FacebookMark,
-  amazon: AmazonMark,
   apple: AppleMark,
 };
 

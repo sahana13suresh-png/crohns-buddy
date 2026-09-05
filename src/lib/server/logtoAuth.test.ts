@@ -20,7 +20,7 @@ beforeEach(() => {
     LOGTO_APP_SECRET: 'app-secret',
     AUTH_ALLOWED_ORIGINS:
       'https://www.crohns-buddy.com,https://www.crohns-buddy.com,not-an-origin',
-    AUTH_SOCIAL_PROVIDERS: 'google,Facebook,amazon,apple,google',
+    AUTH_SOCIAL_PROVIDERS: 'google,Facebook,apple,google',
   };
 });
 
@@ -37,7 +37,7 @@ describe('Logto authentication configuration', () => {
       clientId: 'crohns-buddy-web',
       clientSecret: 'app-secret',
       allowedOrigins: ['https://www.crohns-buddy.com'],
-      socialProviders: ['google', 'facebook', 'amazon', 'apple'],
+      socialProviders: ['google', 'facebook', 'apple'],
     });
   });
 

@@ -92,13 +92,6 @@ Parameters:
   FacebookApiVersion:
     Type: String
     Default: v21.0
-  LoginWithAmazonClientId:
-    Type: String
-    Default: ''
-  LoginWithAmazonClientSecret:
-    Type: String
-    NoEcho: true
-    Default: ''
   AppleServicesId:
     Type: String
     Default: ''
@@ -132,10 +125,6 @@ Conditions:
     - !Equals [!Ref EnableSocialIdentityProviders, 'true']
     - !Not [!Equals [!Ref FacebookClientId, '']]
     - !Not [!Equals [!Ref FacebookClientSecret, '']]
-  HasLoginWithAmazonProvider: !And
-    - !Equals [!Ref EnableSocialIdentityProviders, 'true']
-    - !Not [!Equals [!Ref LoginWithAmazonClientId, '']]
-    - !Not [!Equals [!Ref LoginWithAmazonClientSecret, '']]
   HasAppleProvider: !And
     - !Equals [!Ref EnableSocialIdentityProviders, 'true']
     - !Not [!Equals [!Ref AppleServicesId, '']]
@@ -259,22 +248,6 @@ Resources:
         name: name
         username: id
 
-  LoginWithAmazonIdentityProvider:
-    Type: AWS::Cognito::UserPoolIdentityProvider
-    Condition: HasLoginWithAmazonProvider
-    Properties:
-      ProviderName: LoginWithAmazon
-      ProviderType: LoginWithAmazon
-      UserPoolId: !Ref UserPool
-      ProviderDetails:
-        client_id: !Ref LoginWithAmazonClientId
-        client_secret: !Ref LoginWithAmazonClientSecret
-        authorize_scopes: profile
-      AttributeMapping:
-        email: email
-        name: name
-        username: user_id
-
   AppleIdentityProvider:
     Type: AWS::Cognito::UserPoolIdentityProvider
     Condition: HasAppleProvider
@@ -319,7 +292,6 @@ Resources:
         - COGNITO
         - !If [HasGoogleProvider, !Ref GoogleIdentityProvider, !Ref 'AWS::NoValue']
         - !If [HasFacebookProvider, !Ref FacebookIdentityProvider, !Ref 'AWS::NoValue']
-        - !If [HasLoginWithAmazonProvider, !Ref LoginWithAmazonIdentityProvider, !Ref 'AWS::NoValue']
         - !If [HasAppleProvider, !Ref AppleIdentityProvider, !Ref 'AWS::NoValue']
       PreventUserExistenceErrors: ENABLED
       EnableTokenRevocation: true
@@ -488,7 +460,6 @@ Resources:
             - ','
             - - !If [EnableGoogleInApp, google, '']
               - !If [HasFacebookProvider, facebook, '']
-              - !If [HasLoginWithAmazonProvider, amazon, '']
               - !If [HasAppleProvider, apple, '']
         - Name: COGNITO_AWS_REGION
           Value: !Ref AWS::Region
@@ -520,7 +491,6 @@ Resources:
             - ','
             - - !If [EnableGoogleInApp, Google, '']
               - !If [HasFacebookProvider, Facebook, '']
-              - !If [HasLoginWithAmazonProvider, LoginWithAmazon, '']
               - !If [HasAppleProvider, SignInWithApple, '']
         - Name: AUTH_SELF_REGISTRATION_ENABLED
           Value: !If [UseLogtoAuth, 'true', 'false']
@@ -647,7 +617,5 @@ Outputs:
     Value: !If [HasGoogleProvider, ENABLED, AWAITING_PROVIDER_CREDENTIALS]
   FacebookSocialLoginStatus:
     Value: !If [HasFacebookProvider, ENABLED, AWAITING_PROVIDER_CREDENTIALS]
-  LoginWithAmazonSocialLoginStatus:
-    Value: !If [HasLoginWithAmazonProvider, ENABLED, AWAITING_PROVIDER_CREDENTIALS]
   AppleSocialLoginStatus:
     Value: !If [HasAppleProvider, ENABLED, AWAITING_PROVIDER_CREDENTIALS]

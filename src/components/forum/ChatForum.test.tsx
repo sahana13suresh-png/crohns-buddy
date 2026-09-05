@@ -18,7 +18,6 @@ const signInWithProvider =
       provider:
         | 'Google'
         | 'Facebook'
-        | 'LoginWithAmazon'
         | 'SignInWithApple',
     ) => Promise<GoogleSignInOutcome>
   >();
@@ -30,7 +29,6 @@ vi.mock('@/lib/auth', () => ({
     provider:
       | 'Google'
       | 'Facebook'
-      | 'LoginWithAmazon'
       | 'SignInWithApple',
   ) => signInWithProvider(provider),
   signOut: () => signOut(),

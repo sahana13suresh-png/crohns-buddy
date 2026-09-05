@@ -62,7 +62,7 @@ test('account modal separates social, email, signup, and recovery choices', asyn
   ).toBeEnabled();
   await expect(
     dialog.getByRole('button', { name: 'Sign in with Amazon' }),
-  ).toBeEnabled();
+  ).toHaveCount(0);
   await expect(
     dialog.getByRole('button', { name: 'Sign in with Apple' }),
   ).toBeEnabled();

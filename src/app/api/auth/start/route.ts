@@ -85,8 +85,6 @@ export function GET(request: NextRequest): NextResponse {
 const LOGTO_PROVIDER_TARGETS: Record<string, string> = {
   google: 'google',
   facebook: 'facebook',
-  loginwithamazon: 'amazon',
-  amazon: 'amazon',
   signinwithapple: 'apple',
   apple: 'apple',
 };

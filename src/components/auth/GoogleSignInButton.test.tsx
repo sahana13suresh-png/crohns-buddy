@@ -20,7 +20,6 @@ const signInWithProvider =
       provider:
         | 'Google'
         | 'Facebook'
-        | 'LoginWithAmazon'
         | 'SignInWithApple',
     ) => Promise<GoogleSignInOutcome>
   >();
@@ -30,7 +29,6 @@ vi.mock('@/lib/auth', () => ({
     provider:
       | 'Google'
       | 'Facebook'
-      | 'LoginWithAmazon'
       | 'SignInWithApple',
   ) => signInWithProvider(provider),
 }));
@@ -54,7 +52,6 @@ describe('parseConfiguredProviders', () => {
     ).toEqual([
       'google',
       'facebook',
-      'amazon',
       'apple',
     ]);
   });
@@ -80,11 +77,11 @@ describe('GoogleSignInButton', () => {
       screen.getByRole('button', { name: /sign in with facebook/i }),
     ).toBeDisabled();
     expect(
-      screen.getByRole('button', { name: /sign in with amazon/i }),
-    ).toBeDisabled();
-    expect(
       screen.getByRole('button', { name: /sign in with apple/i }),
     ).toBeDisabled();
+    expect(
+      screen.queryByRole('button', { name: /sign in with amazon/i }),
+    ).not.toBeInTheDocument();
 
     await userEvent.tab();
     expect(screen.getByRole('button', GOOGLE_CONTROL)).toHaveFocus();
@@ -99,11 +96,11 @@ describe('GoogleSignInButton', () => {
     'renders disabled provider choices for the configuration %o',
     (providers) => {
       render(<GoogleSignInButton providers={providers ?? ''} />);
-      expect(screen.getAllByRole('button')).toHaveLength(4);
+      expect(screen.getAllByRole('button')).toHaveLength(3);
       for (const control of screen.getAllByRole('button')) {
         expect(control).toBeDisabled();
       }
-      expect(screen.getAllByText('Soon')).toHaveLength(4);
+      expect(screen.getAllByText('Soon')).toHaveLength(3);
     },
   );
 

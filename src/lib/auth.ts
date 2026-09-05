@@ -33,7 +33,6 @@ export type GoogleSignInOutcome =
 export type SocialProviderName =
   | 'Google'
   | 'Facebook'
-  | 'LoginWithAmazon'
   | 'SignInWithApple';
 
 export type AuthErrorKind =
