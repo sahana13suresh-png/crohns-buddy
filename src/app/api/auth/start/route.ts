@@ -91,6 +91,12 @@ const LOGTO_PROVIDER_TARGETS: Record<string, string> = {
   apple: 'apple',
 };
 
+// Logto 1.43 only includes the OIDC auth_time claim when max_age is requested.
+// The callback verifier needs that original authentication time for the
+// application's reauthentication window; a one-day age also avoids silently
+// reusing an old Logto session indefinitely.
+const LOGTO_MAX_AUTH_AGE_SECONDS = 24 * 60 * 60;
+
 function startLogto(request: NextRequest): NextResponse {
   const config = readLogtoConfig();
   const origin = requestOriginForLogto(request);
@@ -120,6 +126,7 @@ function startLogto(request: NextRequest): NextResponse {
     client_id: config.clientId,
     response_type: 'code',
     scope: 'openid offline_access profile email',
+    max_age: String(LOGTO_MAX_AUTH_AGE_SECONDS),
     redirect_uri: redirectUri,
     state,
     code_challenge_method: 'S256',

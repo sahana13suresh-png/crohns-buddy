@@ -125,6 +125,9 @@ Conditions:
     - !Equals [!Ref EnableSocialIdentityProviders, 'true']
     - !Not [!Equals [!Ref GoogleClientId, '']]
     - !Not [!Equals [!Ref GoogleClientSecret, '']]
+  EnableGoogleInApp: !Or
+    - !Condition UseLogtoAuth
+    - !Condition HasGoogleProvider
   HasFacebookProvider: !And
     - !Equals [!Ref EnableSocialIdentityProviders, 'true']
     - !Not [!Equals [!Ref FacebookClientId, '']]
@@ -483,7 +486,7 @@ Resources:
         - Name: NEXT_PUBLIC_AUTH_PROVIDERS
           Value: !Join
             - ','
-            - - !If [HasGoogleProvider, google, '']
+            - - !If [EnableGoogleInApp, google, '']
               - !If [HasFacebookProvider, facebook, '']
               - !If [HasLoginWithAmazonProvider, amazon, '']
               - !If [HasAppleProvider, apple, '']
@@ -516,7 +519,7 @@ Resources:
         - Name: AUTH_SOCIAL_PROVIDERS
           Value: !Join
             - ','
-            - - !If [HasGoogleProvider, Google, '']
+            - - !If [EnableGoogleInApp, Google, '']
               - !If [HasFacebookProvider, Facebook, '']
               - !If [HasLoginWithAmazonProvider, LoginWithAmazon, '']
               - !If [HasAppleProvider, SignInWithApple, '']
