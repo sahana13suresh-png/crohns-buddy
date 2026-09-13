@@ -99,13 +99,13 @@ export default function DeletePlanDialog({ plan, onDeleted, onCancel }: DeletePl
   }, [plan.mealPlanId, submitting, onDeleted]);
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-brand-800/40">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-brand-800/50 p-4 backdrop-blur-sm">
       <div
         role="dialog"
         aria-modal="true"
         aria-labelledby={headingId}
         aria-describedby={promptId}
-        className="bg-brand-50 w-full max-w-sm mx-4 p-10 border border-brand-800/10 rounded-sm"
+        className="w-full max-w-sm rounded-2xl border border-white/70 bg-white p-7 shadow-2xl sm:p-9"
       >
         <p className="text-xs uppercase tracking-widest text-brand-400 mb-2">Saved meal plan</p>
         <h2 id={headingId} className="text-xl mb-4">
@@ -134,7 +134,7 @@ export default function DeletePlanDialog({ plan, onDeleted, onCancel }: DeletePl
           <button
             type="button"
             onClick={onCancel}
-            className="flex-1 px-4 py-3 text-sm text-brand-800/60 border border-brand-800/15 rounded-sm hover:text-brand-800 transition-colors duration-200"
+            className="btn-secondary flex-1"
           >
             Cancel
           </button>

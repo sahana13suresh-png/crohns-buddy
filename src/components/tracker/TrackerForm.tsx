@@ -113,14 +113,14 @@ export default function TrackerForm({ date, initialData, onSubmit, onCancel }: T
   }
 
   return (
-    <form onSubmit={handleSubmit} className="bg-white rounded-lg shadow-md p-6 space-y-6">
-      <h2 className="text-xl font-semibold text-blue-800">
+    <form onSubmit={handleSubmit} className="surface-card space-y-6">
+      <h2 className="text-xl font-semibold text-brand-800">
         Daily Log — {formatDate(date)}
       </h2>
 
       {/* Food Consumed */}
       <div className="space-y-2">
-        <label htmlFor="foodConsumed" className="block text-sm font-medium text-gray-700">
+        <label htmlFor="foodConsumed" className="block text-sm font-semibold text-brand-800/75">
           What did you eat today?
         </label>
         <textarea
@@ -130,10 +130,10 @@ export default function TrackerForm({ date, initialData, onSubmit, onCancel }: T
           onBlur={() => handleBlur('foodConsumed')}
           maxLength={500}
           rows={4}
-          className={`w-full rounded-md border px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 ${
+          className={`field-control min-h-28 resize-y ${
             touched.foodConsumed && errors.foodConsumed
-              ? 'border-red-400 focus:ring-red-400'
-              : 'border-gray-300'
+              ? 'border-red-400 focus:border-red-400 focus:ring-red-100'
+              : ''
           }`}
           placeholder="Describe what you ate today..."
           aria-describedby="foodConsumed-count foodConsumed-error"
@@ -141,7 +141,7 @@ export default function TrackerForm({ date, initialData, onSubmit, onCancel }: T
         <div className="flex justify-between items-center">
           <span
             id="foodConsumed-count"
-            className={`text-xs ${foodConsumed.length > 500 ? 'text-red-600' : 'text-gray-500'}`}
+            className={`text-xs ${foodConsumed.length > 500 ? 'text-red-600' : 'text-brand-800/45'}`}
           >
             {foodConsumed.length}/500 characters
           </span>
@@ -155,7 +155,7 @@ export default function TrackerForm({ date, initialData, onSubmit, onCancel }: T
 
       {/* Pain Level */}
       <div className="space-y-2">
-        <label htmlFor="painLevel" className="block text-sm font-medium text-gray-700">
+        <label htmlFor="painLevel" className="block text-sm font-semibold text-brand-800/75">
           Pain Level (1 = no pain, 10 = worst pain)
         </label>
         <div className="flex items-center gap-3">
@@ -168,14 +168,14 @@ export default function TrackerForm({ date, initialData, onSubmit, onCancel }: T
             value={painLevel}
             onChange={(e) => setPainLevel(Math.round(Number(e.target.value)))}
             onBlur={() => handleBlur('painLevel')}
-            className={`w-20 rounded-md border px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 ${
+            className={`field-control w-24 ${
               touched.painLevel && errors.painLevel
-                ? 'border-red-400 focus:ring-red-400'
-                : 'border-gray-300'
+                ? 'border-red-400 focus:border-red-400 focus:ring-red-100'
+                : ''
             }`}
             aria-describedby="painLevel-error"
           />
-          <span className="text-sm text-gray-500">/10</span>
+          <span className="text-sm text-brand-800/45">/10</span>
         </div>
         {touched.painLevel && errors.painLevel && (
           <span id="painLevel-error" className="text-xs text-red-600" role="alert">
@@ -186,7 +186,7 @@ export default function TrackerForm({ date, initialData, onSubmit, onCancel }: T
 
       {/* Bowel Movements */}
       <div className="space-y-2">
-        <label htmlFor="bowelMovements" className="block text-sm font-medium text-gray-700">
+        <label htmlFor="bowelMovements" className="block text-sm font-semibold text-brand-800/75">
           Number of Bowel Movements
         </label>
         <div className="flex items-center gap-3">
@@ -199,14 +199,14 @@ export default function TrackerForm({ date, initialData, onSubmit, onCancel }: T
             value={bowelMovements}
             onChange={(e) => setBowelMovements(Math.round(Number(e.target.value)))}
             onBlur={() => handleBlur('bowelMovements')}
-            className={`w-20 rounded-md border px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 ${
+            className={`field-control w-24 ${
               touched.bowelMovements && errors.bowelMovements
-                ? 'border-red-400 focus:ring-red-400'
-                : 'border-gray-300'
+                ? 'border-red-400 focus:border-red-400 focus:ring-red-100'
+                : ''
             }`}
             aria-describedby="bowelMovements-error"
           />
-          <span className="text-sm text-gray-500">(0–20)</span>
+          <span className="text-sm text-brand-800/45">(0–20)</span>
         </div>
         {touched.bowelMovements && errors.bowelMovements && (
           <span id="bowelMovements-error" className="text-xs text-red-600" role="alert">
@@ -217,7 +217,7 @@ export default function TrackerForm({ date, initialData, onSubmit, onCancel }: T
 
       {/* Stress Level */}
       <div className="space-y-2">
-        <label htmlFor="stressLevel" className="block text-sm font-medium text-gray-700">
+        <label htmlFor="stressLevel" className="block text-sm font-semibold text-brand-800/75">
           Stress Level (1 = very relaxed, 10 = extremely stressed)
         </label>
         <div className="flex items-center gap-3">
@@ -230,14 +230,14 @@ export default function TrackerForm({ date, initialData, onSubmit, onCancel }: T
             value={stressLevel}
             onChange={(e) => setStressLevel(Math.round(Number(e.target.value)))}
             onBlur={() => handleBlur('stressLevel')}
-            className={`w-20 rounded-md border px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 ${
+            className={`field-control w-24 ${
               touched.stressLevel && errors.stressLevel
-                ? 'border-red-400 focus:ring-red-400'
-                : 'border-gray-300'
+                ? 'border-red-400 focus:border-red-400 focus:ring-red-100'
+                : ''
             }`}
             aria-describedby="stressLevel-error"
           />
-          <span className="text-sm text-gray-500">/10</span>
+          <span className="text-sm text-brand-800/45">/10</span>
         </div>
         {touched.stressLevel && errors.stressLevel && (
           <span id="stressLevel-error" className="text-xs text-red-600" role="alert">
@@ -248,7 +248,7 @@ export default function TrackerForm({ date, initialData, onSubmit, onCancel }: T
 
       {/* Energy Level */}
       <div className="space-y-2">
-        <label htmlFor="energyLevel" className="block text-sm font-medium text-gray-700">
+        <label htmlFor="energyLevel" className="block text-sm font-semibold text-brand-800/75">
           Energy Level (1 = very low, 10 = very high)
         </label>
         <div className="flex items-center gap-3">
@@ -261,14 +261,14 @@ export default function TrackerForm({ date, initialData, onSubmit, onCancel }: T
             value={energyLevel}
             onChange={(e) => setEnergyLevel(Math.round(Number(e.target.value)))}
             onBlur={() => handleBlur('energyLevel')}
-            className={`w-20 rounded-md border px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 ${
+            className={`field-control w-24 ${
               touched.energyLevel && errors.energyLevel
-                ? 'border-red-400 focus:ring-red-400'
-                : 'border-gray-300'
+                ? 'border-red-400 focus:border-red-400 focus:ring-red-100'
+                : ''
             }`}
             aria-describedby="energyLevel-error"
           />
-          <span className="text-sm text-gray-500">/10</span>
+          <span className="text-sm text-brand-800/45">/10</span>
         </div>
         {touched.energyLevel && errors.energyLevel && (
           <span id="energyLevel-error" className="text-xs text-red-600" role="alert">
@@ -281,7 +281,7 @@ export default function TrackerForm({ date, initialData, onSubmit, onCancel }: T
       <div className="flex gap-3 pt-4">
         <button
           type="submit"
-          className="flex-1 rounded-md bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition-colors"
+          className="btn-primary flex-1"
         >
           {initialData ? 'Update Entry' : 'Save Entry'}
         </button>
@@ -289,7 +289,7 @@ export default function TrackerForm({ date, initialData, onSubmit, onCancel }: T
           <button
             type="button"
             onClick={onCancel}
-            className="rounded-md border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition-colors"
+            className="btn-secondary"
           >
             Cancel
           </button>

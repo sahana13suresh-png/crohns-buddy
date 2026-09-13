@@ -81,7 +81,7 @@ export default function TabNavigation({ activeTab, onTabChange }: TabNavigationP
       <div
         role="tablist"
         aria-label="Site sections"
-        className="flex gap-8 overflow-x-auto"
+        className="-mx-1 flex gap-1 overflow-x-auto px-1 pb-3 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
       >
         {TABS.map((tab, index) => {
           const isActive = activeTab === tab.id;
@@ -97,11 +97,11 @@ export default function TabNavigation({ activeTab, onTabChange }: TabNavigationP
               onClick={() => onTabChange(tab.id)}
               onKeyDown={(e) => handleKeyDown(e, index)}
               className={`
-                relative py-4 text-xs uppercase tracking-widest whitespace-nowrap transition-opacity duration-200
-                focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-400
+                relative rounded-full px-3.5 py-2 text-xs font-semibold whitespace-nowrap transition-all duration-200
+                focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-500
                 ${isActive
-                  ? 'text-brand-800 after:absolute after:bottom-0 after:left-0 after:w-full after:h-[2px] after:bg-brand-400'
-                  : 'text-brand-800/40 hover:text-brand-800/70'
+                  ? 'bg-brand-800 text-brand-800 !text-white shadow-sm after:absolute after:bottom-0 after:left-1/2 after:h-[2px] after:w-5 after:-translate-x-1/2 after:bg-brand-400 after:opacity-0'
+                  : 'text-brand-800/40 hover:bg-brand-50 hover:text-brand-800/75'
                 }
               `}
             >

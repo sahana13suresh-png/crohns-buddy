@@ -50,28 +50,32 @@ export default function Home() {
 
   return (
     <div className="flex-1 flex flex-col">
-      {/* Header */}
-      <header className="border-b border-brand-800/10">
-        <div className="max-w-7xl mx-auto px-6 md:px-12 py-6 flex items-center gap-3">
-          <Image
-            src="/logo.png"
-            alt="Crohn's Buddy logo"
-            width={56}
-            height={56}
-            priority
-          />
-          <h1 className="text-2xl md:text-3xl font-heading text-brand-800 uppercase tracking-widest">
-            Crohn&#39;s Buddy
-          </h1>
-        </div>
+      <header className="sticky top-0 z-30 border-b border-brand-800/10 bg-white/85 shadow-[0_8px_30px_-24px_rgba(15,34,64,0.45)] backdrop-blur-xl">
+        <div className="max-w-7xl mx-auto px-5 sm:px-6 lg:px-8 pt-3 lg:pt-4">
+          <div className="flex items-center gap-3 pb-3 lg:pb-4">
+            <div className="flex h-12 w-12 items-center justify-center rounded-2xl border border-brand-200/70 bg-brand-50 shadow-sm">
+              <Image
+                src="/logo.png"
+                alt="Crohn's Buddy logo"
+                width={42}
+                height={42}
+                priority
+              />
+            </div>
+            <div>
+              <p className="display-heading text-xl leading-none sm:text-2xl">
+                Crohn&#39;s Buddy
+              </p>
+              <p className="mt-1 hidden text-xs font-medium text-brand-800/50 sm:block">
+                Everyday support for living well with Crohn&#39;s
+              </p>
+            </div>
+          </div>
 
-        {/* Navigation */}
-        <div className="max-w-7xl mx-auto px-6 md:px-12 pb-0">
           <TabNavigation activeTab={activeTab} onTabChange={setActiveTab} />
         </div>
       </header>
 
-      {/* Main Content */}
       <main className="flex-1">
         <div
           role="tabpanel"
@@ -81,6 +85,13 @@ export default function Home() {
           {renderTabContent()}
         </div>
       </main>
+
+      <footer className="mt-auto border-t border-brand-800/10 bg-white/60">
+        <div className="mx-auto flex max-w-7xl flex-col gap-3 px-5 py-7 text-sm text-brand-800/55 sm:px-6 md:flex-row md:items-center md:justify-between lg:px-8">
+          <p>Support, practical tools, and community for the Crohn&#39;s journey.</p>
+          <p>&copy; {new Date().getFullYear()} Crohn&#39;s Buddy</p>
+        </div>
+      </footer>
     </div>
   );
 }

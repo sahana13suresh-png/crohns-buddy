@@ -34,7 +34,7 @@ export default function RootLayout({
       <body>
         {/* Session state for every page (Requirements 2.4, 2.5, 2.13). */}
         <SessionProvider>
-          <div className="min-h-screen flex flex-col bg-brand-50">
+          <div className="min-h-screen flex flex-col">
             {/* The account controls belong to the layout, not to a page, because
                 Requirement 2.4 asks for them in the header of every page. */}
             <AccountMenu />

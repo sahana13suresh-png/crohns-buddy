@@ -392,7 +392,7 @@ export default function SavedPlansList({ onOpenPlan }: SavedPlansListProps) {
     // Requirement 6.10 — and Requirement 2.13's expiry message is rendered by
     // `AccountMenu`, so it is not repeated here.
     return (
-      <section aria-labelledby="saved-plans-heading" className="space-y-4">
+      <section aria-labelledby="saved-plans-heading" className="soft-panel mb-8 space-y-3">
         <h2 id="saved-plans-heading" className="text-lg">
           Saved Meal Plans
         </h2>
@@ -404,7 +404,7 @@ export default function SavedPlansList({ onOpenPlan }: SavedPlansListProps) {
   }
 
   return (
-    <section aria-labelledby="saved-plans-heading" className="space-y-4">
+    <section aria-labelledby="saved-plans-heading" className="surface-card mb-8 space-y-4">
       <h2 id="saved-plans-heading" className="text-lg">
         Saved Meal Plans
       </h2>
@@ -412,7 +412,7 @@ export default function SavedPlansList({ onOpenPlan }: SavedPlansListProps) {
       {/* The reopened plan, rendered by the same component a generated plan uses
           (Requirement 6.4), with the list still below it (Requirement 6.9). */}
       {openRecord !== null && (
-        <div className="space-y-3 border border-brand-800/10 rounded-sm p-4">
+        <div className="space-y-3 rounded-2xl border border-brand-800/10 bg-brand-50/40 p-4">
           <div className="flex items-baseline justify-between gap-3">
             <h3 className="text-base">{openRecord.title}</h3>
             <button
@@ -433,13 +433,13 @@ export default function SavedPlansList({ onOpenPlan }: SavedPlansListProps) {
       )}
 
       {openError !== null && (
-        <div role="alert" className="rounded-sm border border-amber-200 bg-amber-50 p-4 text-sm">
+        <div role="alert" className="rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm">
           <p className="text-amber-800">{openError}</p>
           {retryOpenId !== null && (
             <button
               type="button"
               onClick={() => void openPlan(retryOpenId)}
-              className="mt-3 px-3 py-1.5 text-xs border border-amber-300 rounded-sm text-amber-800 hover:bg-amber-100 transition-colors duration-200"
+              className="mt-3 rounded-full border border-amber-300 px-3 py-1.5 text-xs font-semibold text-amber-800 transition-colors duration-200 hover:bg-amber-100"
             >
               {RETRY_LABEL}
             </button>
@@ -450,12 +450,12 @@ export default function SavedPlansList({ onOpenPlan }: SavedPlansListProps) {
       {items.length > 0 && (
         <ul
           aria-label="Saved meal plans"
-          className="divide-y divide-brand-800/10 border border-brand-800/10 rounded-sm"
+          className="divide-y divide-brand-800/10 overflow-hidden rounded-xl border border-brand-800/10 bg-white"
         >
           {items.map((plan) => (
             <li
               key={plan.mealPlanId}
-              className="flex items-center justify-between gap-4 px-4 py-3"
+              className="flex flex-col gap-3 px-4 py-4 sm:flex-row sm:items-center sm:justify-between"
             >
               <div className="min-w-0">
                 <p className="truncate text-sm text-brand-800">{plan.title}</p>
@@ -466,12 +466,12 @@ export default function SavedPlansList({ onOpenPlan }: SavedPlansListProps) {
                   {formatCreatedDate(plan.createdAt)}
                 </time>
               </div>
-              <div className="flex items-center gap-2 flex-shrink-0">
+              <div className="flex flex-wrap items-center gap-2 flex-shrink-0">
                 <button
                   type="button"
                   onClick={() => void openPlan(plan.mealPlanId)}
                   aria-label={`Open ${plan.title}`}
-                  className="px-3 py-1.5 text-xs border border-brand-800/15 rounded-sm hover:bg-brand-100 transition-colors duration-200"
+                  className="rounded-full border border-brand-800/15 px-3 py-1.5 text-xs font-semibold transition-colors duration-200 hover:border-brand-300 hover:bg-brand-50"
                 >
                   Open
                 </button>
@@ -479,7 +479,7 @@ export default function SavedPlansList({ onOpenPlan }: SavedPlansListProps) {
                   type="button"
                   onClick={() => setRenameTarget(plan)}
                   aria-label={`Rename ${plan.title}`}
-                  className="px-3 py-1.5 text-xs border border-brand-800/15 rounded-sm hover:bg-brand-100 transition-colors duration-200"
+                  className="rounded-full border border-brand-800/15 px-3 py-1.5 text-xs font-semibold transition-colors duration-200 hover:border-brand-300 hover:bg-brand-50"
                 >
                   Rename
                 </button>
@@ -487,7 +487,7 @@ export default function SavedPlansList({ onOpenPlan }: SavedPlansListProps) {
                   type="button"
                   onClick={() => setDeleteTarget(plan)}
                   aria-label={`Delete ${plan.title}`}
-                  className="px-3 py-1.5 text-xs border border-brand-800/15 rounded-sm text-red-700 hover:bg-red-50 transition-colors duration-200"
+                  className="rounded-full border border-red-200 px-3 py-1.5 text-xs font-semibold text-red-700 transition-colors duration-200 hover:bg-red-50"
                 >
                   Delete
                 </button>
@@ -516,12 +516,12 @@ export default function SavedPlansList({ onOpenPlan }: SavedPlansListProps) {
       )}
 
       {listError !== null && (
-        <div role="alert" className="rounded-sm border border-red-200 bg-red-50 p-4 text-sm">
+        <div role="alert" className="rounded-xl border border-red-200 bg-red-50 p-4 text-sm">
           <p className="text-red-800">{listError}</p>
           <button
             type="button"
             onClick={() => void loadPage(failedCursor)}
-            className="mt-3 px-3 py-1.5 text-xs border border-red-300 rounded-sm text-red-800 hover:bg-red-100 transition-colors duration-200"
+            className="mt-3 rounded-full border border-red-300 px-3 py-1.5 text-xs font-semibold text-red-800 transition-colors duration-200 hover:bg-red-100"
           >
             {RETRY_LABEL}
           </button>
@@ -535,7 +535,7 @@ export default function SavedPlansList({ onOpenPlan }: SavedPlansListProps) {
           type="button"
           onClick={() => void loadPage(nextCursor)}
           disabled={inFlight}
-          className="px-4 py-2 text-sm border border-brand-800/15 rounded-sm hover:bg-brand-100 transition-colors duration-200 disabled:opacity-40"
+          className="btn-secondary px-4 py-2 disabled:opacity-40"
         >
           {LOAD_MORE_LABEL}
         </button>

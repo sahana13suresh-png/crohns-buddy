@@ -152,12 +152,12 @@ function downloadJsonFile(json: string, fileName: string): void {
 
 // ─── Styles ────────────────────────────────────────────────────────────────────
 
-const CARD = 'bg-white border border-brand-800/10 rounded-sm p-6 space-y-4';
+const CARD = 'surface-card space-y-4';
 const SECONDARY_BUTTON =
-  'px-4 py-3 text-sm text-brand-800/60 border border-brand-800/15 rounded-sm hover:text-brand-800 transition-colors duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-400 disabled:opacity-60 disabled:cursor-not-allowed';
+  'btn-secondary disabled:opacity-60 disabled:cursor-not-allowed';
 const INPUT_CLASS =
-  'w-full px-4 py-3 bg-transparent border border-brand-800/15 rounded-sm text-sm text-brand-800 placeholder:text-brand-800/30 focus:outline-none focus:border-brand-400 transition-colors duration-200';
-const LABEL_CLASS = 'block text-xs uppercase tracking-widest text-brand-800/50 mb-2';
+  'field-control';
+const LABEL_CLASS = 'block text-xs font-semibold uppercase tracking-[0.16em] text-brand-800/55 mb-2';
 
 // ─── Component ─────────────────────────────────────────────────────────────────
 
@@ -559,8 +559,14 @@ export default function AccountSettingsPage({ deletionPorts }: AccountSettingsPa
   );
 
   return (
-    <div className="max-w-4xl mx-auto px-4 py-8 space-y-10">
-      <h1 className="text-center mb-8">Account settings</h1>
+    <div className="page-shell max-w-4xl space-y-10">
+      <div className="page-intro">
+        <p className="eyebrow mb-4">Your preferences and privacy</p>
+        <h1 className="mb-4">Account settings</h1>
+        <p className="max-w-2xl text-lg leading-relaxed text-brand-800/60">
+          Manage your account data and privacy choices in one place.
+        </p>
+      </div>
 
       {deletionCompleted ? (
         completionSection

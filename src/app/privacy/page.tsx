@@ -27,12 +27,18 @@ export const metadata: Metadata = {
 };
 
 const SECTION_HEADING = 'mb-4';
-const CARD = 'bg-white border border-brand-800/10 rounded-sm p-6 space-y-3';
+const CARD = 'surface-card space-y-3 leading-relaxed text-brand-800/70';
 
 export default function PrivacyNotice() {
   return (
-    <div className="max-w-4xl mx-auto px-4 py-8 space-y-10">
-      <h1 className="text-center mb-8">Privacy Notice</h1>
+    <div className="page-shell max-w-4xl space-y-10">
+      <div className="page-intro">
+        <p className="eyebrow mb-4">Clear and transparent</p>
+        <h1 className="mb-4">Privacy Notice</h1>
+        <p className="max-w-2xl text-lg leading-relaxed text-brand-800/60">
+          What Crohn&#39;s Buddy saves, how it is protected, and the choices you have.
+        </p>
+      </div>
 
       <section aria-labelledby="what-we-store">
         <h2 id="what-we-store" className={SECTION_HEADING}>
@@ -152,7 +158,7 @@ export default function PrivacyNotice() {
           Not medical advice
         </h2>
         <div className={CARD}>
-          <p className="p-4 bg-brand-50 rounded-lg border border-brand-200 text-sm">
+          <p className="rounded-xl border border-brand-200 bg-brand-50 p-4 text-sm">
             <span className="font-semibold">Important:</span> Crohn&#39;s Buddy
             provides no medical advice. Nothing on this site, including
             AI-generated meal plans, is a diagnosis, a treatment plan, or a
@@ -163,7 +169,7 @@ export default function PrivacyNotice() {
       </section>
 
       <p className="text-center text-sm">
-        <Link href="/" className="underline">
+        <Link href="/" className="btn-secondary">
           Back to Crohn&#39;s Buddy
         </Link>
       </p>

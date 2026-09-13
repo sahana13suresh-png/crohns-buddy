@@ -38,7 +38,7 @@ import {
 type AuthModalMode = 'login' | 'signup';
 
 const CONTROL_CLASS =
-  'text-xs uppercase tracking-widest text-brand-800/60 hover:text-brand-800 transition-opacity duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-400 rounded-sm';
+  'rounded-full border border-white/20 px-3 py-1.5 text-xs font-semibold text-white/90 transition-all duration-200 hover:border-white/40 hover:bg-white/10 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/70 disabled:opacity-60';
 
 export default function AccountMenu() {
   const authConfigured = isCognitoConfigured();
@@ -87,20 +87,20 @@ export default function AccountMenu() {
   };
 
   return (
-    <div className="border-b border-brand-800/10">
+    <div className="bg-brand-800 text-white">
       <nav
         aria-label="Account"
-        className="max-w-7xl mx-auto px-6 md:px-12 py-3 flex items-center justify-end gap-4 min-h-[2.75rem]"
+        className="max-w-7xl mx-auto px-5 sm:px-6 lg:px-8 py-2 flex items-center justify-end gap-3 min-h-[2.75rem]"
       >
         {expiredMessage && (
-          <p role="status" className="text-xs text-brand-800/60 mr-auto">
+          <p role="status" className="text-xs text-white/75 mr-auto">
             {expiredMessage}
           </p>
         )}
 
         {status === 'authenticated' && session && (
           <>
-            <span className="text-xs uppercase tracking-widest text-brand-800/60 hidden sm:inline">
+            <span className="text-xs font-medium text-white/70 hidden sm:inline">
               {session.displayName || session.email}
             </span>
             <button type="button" onClick={handleSignOut} disabled={signingOut} className={CONTROL_CLASS}>
@@ -116,7 +116,7 @@ export default function AccountMenu() {
         )}
 
         {(status === 'unauthenticated' || status === 'expired') && !authConfigured && (
-          <span className="text-xs text-brand-800/60">
+          <span className="text-xs text-white/70">
             Account features are currently unavailable.
           </span>
         )}

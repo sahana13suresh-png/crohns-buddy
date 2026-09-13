@@ -1,4 +1,8 @@
 import {
+  GetSecretValueCommand,
+  SecretsManagerClient,
+} from '@aws-sdk/client-secrets-manager';
+import {
   createRemoteJWKSet,
   decodeJwt,
   jwtVerify,
@@ -39,6 +43,12 @@ interface LogtoManagementConfig {
   apiIndicator: string;
 }
 
+interface LogtoManagementSecret {
+  endpoint: string;
+  clientId: string;
+  clientSecret: string;
+}
+
 export interface AuthenticatedLogtoSession {
   identity: VerifiedIdentity & { emailVerified: boolean };
   accessToken: string;
@@ -56,6 +66,9 @@ interface RevocationEntry {
 
 const jwksByIssuer = new Map<string, ReturnType<typeof createRemoteJWKSet>>();
 const revocationCache = new Map<string, RevocationEntry>();
+const secretsManagerClients = new Map<string, SecretsManagerClient>();
+const LOGTO_MANAGEMENT_SECRET_ID = 'crohns-buddy-prod/logto-management';
+let managementConfigCache: LogtoManagementConfig | undefined;
 let managementTokenCache:
   | { accessToken: string; expiresAtMs: number; clientId: string }
   | undefined;
@@ -101,19 +114,74 @@ export function readLogtoConfig(): LogtoConfig {
   };
 }
 
-function readLogtoManagementConfig(): LogtoManagementConfig {
-  const { endpoint } = readLogtoConfig();
+function validManagementSecret(value: unknown): LogtoManagementSecret | null {
+  if (!value || typeof value !== 'object') return null;
+  const secret = value as Record<string, unknown>;
+  const endpoint =
+    typeof secret.endpoint === 'string'
+      ? secret.endpoint.trim().replace(/\/+$/, '')
+      : '';
+  const clientId =
+    typeof secret.clientId === 'string' ? secret.clientId.trim() : '';
+  const clientSecret =
+    typeof secret.clientSecret === 'string' ? secret.clientSecret.trim() : '';
+  if (!endpoint.startsWith('https://') || !clientId || !clientSecret) {
+    return null;
+  }
+  return { endpoint, clientId, clientSecret };
+}
+
+function secretsManagerForRegion(region: string): SecretsManagerClient {
+  const existing = secretsManagerClients.get(region);
+  if (existing) return existing;
+  const client = new SecretsManagerClient({ region });
+  secretsManagerClients.set(region, client);
+  return client;
+}
+
+async function readLogtoManagementConfig(): Promise<LogtoManagementConfig> {
+  if (managementConfigCache) return managementConfigCache;
+
+  const endpoint = (process.env.LOGTO_ENDPOINT?.trim() ?? '').replace(/\/+$/, '');
   const clientId = process.env.LOGTO_MANAGEMENT_APP_ID?.trim() ?? '';
   const clientSecret = process.env.LOGTO_MANAGEMENT_APP_SECRET?.trim() ?? '';
-  if (!clientId || !clientSecret) {
-    throw new Error('Logto Management API credentials are required.');
+  if (endpoint.startsWith('https://') && clientId && clientSecret) {
+    managementConfigCache = {
+      endpoint,
+      clientId,
+      clientSecret,
+      apiIndicator: 'https://default.logto.app/api',
+    };
+    return managementConfigCache;
   }
-  return {
-    endpoint,
-    clientId,
-    clientSecret,
+
+  const region =
+    process.env.AWS_REGION?.trim() ||
+    process.env.MEAL_PLAN_AWS_REGION?.trim() ||
+    'us-east-1';
+  const secretId =
+    process.env.LOGTO_MANAGEMENT_SECRET_ID?.trim() ||
+    LOGTO_MANAGEMENT_SECRET_ID;
+  const response = await secretsManagerForRegion(region).send(
+    new GetSecretValueCommand({ SecretId: secretId }),
+  );
+  const rawSecret =
+    response.SecretString ??
+    (response.SecretBinary
+      ? Buffer.from(response.SecretBinary).toString('utf8')
+      : '');
+  const parsed = validManagementSecret(
+    rawSecret ? JSON.parse(rawSecret) : null,
+  );
+  if (!parsed) {
+    throw new Error('Logto Management API credentials are invalid.');
+  }
+
+  managementConfigCache = {
+    ...parsed,
     apiIndicator: 'https://default.logto.app/api',
   };
+  return managementConfigCache;
 }
 
 function jwksFor(issuer: string): ReturnType<typeof createRemoteJWKSet> {
@@ -577,7 +645,7 @@ export async function deleteLogtoUser(
   userId: string,
 ): Promise<'ok' | 'invalid' | 'unavailable'> {
   try {
-    const config = readLogtoManagementConfig();
+    const config = await readLogtoManagementConfig();
     const accessToken = await logtoManagementAccessToken(config);
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), AUTH_SERVICE_TIMEOUT_MS);

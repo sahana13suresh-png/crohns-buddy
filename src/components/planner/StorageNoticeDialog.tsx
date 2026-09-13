@@ -90,7 +90,7 @@ export default function StorageNoticeDialog({
   }, [onDecline, submitting]);
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-brand-800/40">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-brand-800/50 p-4 backdrop-blur-sm">
       <div
         ref={panelRef}
         role="dialog"
@@ -98,7 +98,7 @@ export default function StorageNoticeDialog({
         aria-labelledby="storage-notice-heading"
         aria-describedby="storage-notice-body"
         tabIndex={-1}
-        className="bg-brand-50 w-full max-w-md mx-4 p-10 relative border border-brand-800/10 rounded-sm max-h-[90vh] overflow-y-auto focus:outline-none"
+        className="relative max-h-[90vh] w-full max-w-md overflow-y-auto rounded-2xl border border-white/70 bg-white p-7 shadow-2xl focus:outline-none sm:p-9"
       >
         <button
           type="button"
@@ -152,7 +152,7 @@ export default function StorageNoticeDialog({
             type="button"
             onClick={onDecline}
             disabled={submitting}
-            className="w-full px-4 py-3 text-sm text-brand-800/60 border border-brand-800/15 rounded-sm hover:text-brand-800 transition-colors duration-200 disabled:opacity-40"
+            className="btn-secondary w-full disabled:opacity-40"
           >
             {DECLINE_LABEL}
           </button>

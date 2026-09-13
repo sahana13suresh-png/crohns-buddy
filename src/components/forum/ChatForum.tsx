@@ -143,13 +143,13 @@ export default function ChatForum() {
       )}
 
       {/* Messages List */}
-      <div className="space-y-3 max-h-96 overflow-y-auto" aria-label="Forum messages">
+      <div className="max-h-96 space-y-3 overflow-y-auto rounded-2xl bg-brand-50/50 p-3 sm:p-4" aria-label="Forum messages">
         {isLoading && (
-          <p className="text-center text-sm text-gray-500 py-4">Loading messages...</p>
+          <p className="py-8 text-center text-sm text-brand-800/45">Loading messages...</p>
         )}
 
         {!isLoading && messages.length === 0 && !connectionError && (
-          <p className="text-center text-sm text-gray-500 py-4">
+          <p className="py-8 text-center text-sm text-brand-800/45">
             No messages yet. Be the first to say hello!
           </p>
         )}
@@ -169,8 +169,8 @@ export default function ChatForum() {
         posting needs one, and an inert control would explain nothing.
       */}
       {!authLoading && !session && hasIdentityProvider && (
-        <div className="space-y-3 border-t border-gray-200 pt-4">
-          <p className="text-sm text-gray-600">
+        <div className="space-y-3 border-t border-brand-800/10 pt-5">
+          <p className="text-sm text-brand-800/60">
             Sign in to join the conversation
           </p>
           <GoogleSignInButton />
@@ -179,9 +179,9 @@ export default function ChatForum() {
 
       {/* Message Input (shown only if signed in) */}
       {session && (
-        <form onSubmit={handleMessageSubmit} className="space-y-3 border-t border-gray-200 pt-4">
+        <form onSubmit={handleMessageSubmit} className="space-y-3 border-t border-brand-800/10 pt-5">
           <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2 text-sm text-gray-600">
+            <div className="flex items-center gap-2 text-sm text-brand-800/55">
               <span>Posting as</span>
               <span className="font-semibold text-brand-700">
                 {session.displayName || session.email}
@@ -190,7 +190,7 @@ export default function ChatForum() {
             <button
               type="button"
               onClick={handleSignOut}
-              className="text-xs text-gray-500 hover:text-gray-700 underline"
+              className="text-xs font-semibold text-brand-700 hover:text-brand-800"
             >
               Sign out
             </button>
@@ -208,14 +208,14 @@ export default function ChatForum() {
               }}
               placeholder="Type your message..."
               maxLength={MESSAGE_MAX}
-              className="flex-1 rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-brand-500"
+              className="field-control flex-1"
               aria-describedby={messageError ? 'message-error' : undefined}
               disabled={isSending}
             />
             <button
               type="submit"
               disabled={isSending}
-              className="px-4 py-2 rounded-lg bg-brand-600 text-white text-sm font-medium hover:bg-brand-700 focus:outline-none focus:ring-2 focus:ring-brand-500 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              className="btn-primary px-5 py-2.5 disabled:cursor-not-allowed disabled:opacity-50"
             >
               {isSending ? 'Sending...' : 'Send'}
             </button>
@@ -225,7 +225,7 @@ export default function ChatForum() {
               {messageError}
             </p>
           )}
-          <p className="text-xs text-gray-400">
+          <p className="text-xs text-brand-800/35">
             {messageInput.length}/{MESSAGE_MAX} characters
           </p>
         </form>

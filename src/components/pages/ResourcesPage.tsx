@@ -83,28 +83,29 @@ const categoryColors: Record<ExternalLink['category'], string> = {
 
 export default function ResourcesPage() {
   return (
-    <div className="max-w-4xl mx-auto px-4 py-8 space-y-12">
+    <div className="page-shell max-w-5xl space-y-16">
       {/* External Links Section */}
       <section aria-labelledby="resources-heading">
-        <h1 id="resources-heading" className="mb-2">Resources</h1>
-        <p className="text-gray-600 mb-8">
+        <p className="eyebrow mb-4">Trusted places to turn</p>
+        <h1 id="resources-heading" className="mb-4">Resources</h1>
+        <p className="mb-10 max-w-2xl text-lg leading-relaxed text-brand-800/60">
           Curated links to helpful organizations, educational materials, and teen-specific
           support for Crohn&#39;s Disease and IBD patients.
         </p>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 gap-5 md:grid-cols-2">
           {externalLinks.map((link) => (
             <a
               key={link.url}
               href={link.url}
               target="_blank"
               rel="noopener noreferrer"
-              className="card hover:shadow-md hover:border-brand-300 transition-all no-underline group"
+              className="card surface-card-hover group no-underline"
             >
               <div className="flex items-start gap-3">
                 <div className="flex-1">
                   <div className="flex items-center gap-2 mb-1">
-                    <h3 className="text-base font-semibold text-brand-700 group-hover:text-brand-800">
+                    <h3 className="text-base font-semibold text-brand-800 group-hover:text-brand-600">
                       {link.title}
                     </h3>
                     <svg
@@ -122,7 +123,7 @@ export default function ResourcesPage() {
                       />
                     </svg>
                   </div>
-                  <p className="text-sm text-gray-600 mb-2">{link.description}</p>
+                  <p className="mb-4 text-sm leading-relaxed text-brand-800/60">{link.description}</p>
                   <span
                     className={`inline-block text-xs font-medium px-2 py-0.5 rounded-full ${categoryColors[link.category]}`}
                   >
@@ -136,9 +137,10 @@ export default function ResourcesPage() {
       </section>
 
       {/* Community Forum Section */}
-      <section aria-labelledby="forum-heading" className="border-t border-gray-200 pt-8">
+      <section aria-labelledby="forum-heading" className="surface-card">
+        <p className="eyebrow mb-4">Connect with others</p>
         <h2 id="forum-heading" className="mb-4">Community Forum</h2>
-        <p className="text-gray-600 mb-6">
+        <p className="mb-8 max-w-2xl text-brand-800/60">
           Connect with other Crohn&#39;s patients, share experiences, and support each other in
           our community chat.
         </p>

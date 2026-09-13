@@ -151,6 +151,19 @@ Resources:
         - Key: application
           Value: crohns-buddy
 
+  LogtoManagementCredentials:
+    Type: AWS::SecretsManager::Secret
+    DeletionPolicy: Retain
+    UpdateReplacePolicy: Retain
+    Properties:
+      Name: !Sub ${AWS::StackName}/logto-management
+      Description: Runtime credentials for Crohn's Buddy account deletion.
+      SecretString: !Sub >-
+        {"endpoint":"${LogtoEndpoint}","clientId":"${LogtoManagementApplicationId}","clientSecret":"${LogtoManagementApplicationSecret}"}
+      Tags:
+        - Key: application
+          Value: crohns-buddy
+
   UserPool:
     Type: AWS::Cognito::UserPool
     DeletionPolicy: Retain
@@ -345,6 +358,11 @@ Resources:
                 Action:
                   - bedrock:ApplyGuardrail
                 Resource: !Sub arn:${AWS::Partition}:bedrock:${AWS::Region}:${AWS::AccountId}:guardrail/${BedrockGuardrailId}
+              - Sid: ReadLogtoManagementCredentials
+                Effect: Allow
+                Action:
+                  - secretsmanager:GetSecretValue
+                Resource: !Ref LogtoManagementCredentials
 
   MonthlyCostBudget:
     Type: AWS::Budgets::Budget
@@ -444,10 +462,6 @@ Resources:
           Value: !Ref LogtoApplicationId
         - Name: LOGTO_APP_SECRET
           Value: !Ref LogtoApplicationSecret
-        - Name: LOGTO_MANAGEMENT_APP_ID
-          Value: !Ref LogtoManagementApplicationId
-        - Name: LOGTO_MANAGEMENT_APP_SECRET
-          Value: !Ref LogtoManagementApplicationSecret
         - Name: AUTH_ALLOWED_ORIGINS
           Value: !Join
             - ','
