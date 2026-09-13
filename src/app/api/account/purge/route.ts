@@ -11,7 +11,6 @@ import { createPurgeRoute } from './accountPurge';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
-export const preferredRegion = 'iad1'; // us-east-1 — Req 13.6
 
 // A missing credential fails here, at module evaluation, with the credential
 // group named — not mid-purge with a partial deletion behind it

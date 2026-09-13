@@ -699,7 +699,6 @@ export function resolveTargetHost(
     flag ??
     env.VERIFY_DEPLOYMENT_URL ??
     env.DEPLOYMENT_URL ??
-    env.VERCEL_PROJECT_PRODUCTION_URL ??
     env.NEXT_PUBLIC_SITE_URL;
   if (!candidate || candidate.trim() === '') return undefined;
   const withScheme = /^https?:\/\//.test(candidate) ? candidate : `https://${candidate}`;
@@ -824,8 +823,7 @@ Read-only deployment smoke checks. Checks needing live AWS state or a deployed
 endpoint skip with a reason when credentials or a URL are absent.
 
   --url=<url>   the deployed site to check the TLS certificate of. Also read
-                from VERIFY_DEPLOYMENT_URL, DEPLOYMENT_URL,
-                VERCEL_PROJECT_PRODUCTION_URL, or NEXT_PUBLIC_SITE_URL.
+                from VERIFY_DEPLOYMENT_URL, DEPLOYMENT_URL, or NEXT_PUBLIC_SITE_URL.
   --help        print this message`;
 
 const ICON: Record<CheckStatus, string> = { pass: 'PASS', fail: 'FAIL', skip: 'SKIP' };

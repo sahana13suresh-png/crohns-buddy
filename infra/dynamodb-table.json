@@ -13,10 +13,10 @@
   "_regionRationale": [
     "Requirement 13.6 places the Meal_Plan_Store in the same region as the AI inference",
     "endpoint. src/lib/bedrock.ts builds https://bedrock-runtime.${AWS_REGION}.amazonaws.com",
-    "and AWS_REGION defaults to us-east-1, so the table is pinned to us-east-1 and the Vercel",
-    "functions are pinned to iad1. MEAL_PLAN_AWS_REGION must equal AWS_REGION.",
+    "and AWS_REGION defaults to us-east-1, so the table is pinned to us-east-1.",
+    "MEAL_PLAN_AWS_REGION must equal AWS_REGION.",
     "Changing this value alone is not a migration: the table, MEAL_PLAN_AWS_REGION, AWS_REGION,",
-    "the preferredRegion export on every route, and the IAM policy resource ARN move together."
+    "and the IAM policy resource ARN move together."
   ],
 
   "createTable": {

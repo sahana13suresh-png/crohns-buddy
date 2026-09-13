@@ -1,10 +1,10 @@
 /**
  * AWS Bedrock client.
  *
- * Authentication is selected without weakening either deployment mode:
+ * Authentication supports local development and Amplify Hosting:
  *
  * - `AWS_BEARER_TOKEN_BEDROCK` present: use the Bedrock API-key endpoint. This
- *   preserves the existing local/Vercel workflow.
+ *   supports local development without an AWS credential profile.
  * - token absent: use the AWS SDK default credential provider. On Amplify
  *   Hosting this resolves the app's least-privilege SSR compute role.
  */

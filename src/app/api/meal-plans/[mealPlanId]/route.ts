@@ -20,8 +20,6 @@ import type { RouteHandler } from '@/lib/server/withAuth';
 export const runtime = 'nodejs';
 /** Never cached or prerendered — every response is scoped to one Account. */
 export const dynamic = 'force-dynamic';
-/** us-east-1, pinned to the Meal_Plan_Store and inference region (Requirement 13.6). */
-export const preferredRegion = 'iad1';
 
 // A missing credential fails module evaluation rather than surfacing mid-request,
 // and the thrown error names the group (Requirements 13.7, 13.11).

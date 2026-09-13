@@ -282,6 +282,5 @@ describe('route module', () => {
     expect(typeof routeModule.GET).toBe('function');
     expect(routeModule.runtime).toBe('nodejs');
     expect(routeModule.dynamic).toBe('force-dynamic');
-    expect(routeModule.preferredRegion).toBe('iad1');
   });
 });

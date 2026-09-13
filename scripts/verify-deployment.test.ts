@@ -294,7 +294,6 @@ describe('target host resolution', () => {
   it('prefers the flag, then the environment', () => {
     expect(resolveTargetHost(['--url=https://example.com/path'], {})).toBe('example.com');
     expect(resolveTargetHost([], { VERIFY_DEPLOYMENT_URL: 'example.org' })).toBe('example.org');
-    expect(resolveTargetHost([], { VERCEL_PROJECT_PRODUCTION_URL: 'app.vercel.app' })).toBe('app.vercel.app');
   });
 
   it('returns nothing when no target is supplied', () => {

@@ -18,7 +18,6 @@ import { createExportRoute } from './accountExport';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
-export const preferredRegion = 'iad1'; // us-east-1 — Requirement 13.6
 
 // A missing credential fails module evaluation at startup, with the credential
 // group named, rather than mid-export. No default or placeholder is substituted
