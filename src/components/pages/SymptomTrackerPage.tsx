@@ -82,7 +82,8 @@ export default function SymptomTrackerPage() {
   // Show error if localStorage is unavailable
   if (!storageAvailable) {
     return (
-      <div className="max-w-4xl mx-auto px-4 py-8">
+      <div className="page-shell max-w-5xl">
+        <p className="eyebrow mb-4">Daily health journal</p>
         <h1 className="mb-6">Symptom Tracker</h1>
         <div
           className="rounded-lg border border-red-200 bg-red-50 p-6 text-center"
@@ -98,12 +99,19 @@ export default function SymptomTrackerPage() {
   }
 
   return (
-    <div className="max-w-4xl mx-auto px-4 py-8 space-y-8">
-      <h1>Symptom Tracker</h1>
+    <div className="page-shell max-w-5xl">
+      <div className="page-intro">
+        <p className="eyebrow mb-4">Daily health journal</p>
+        <h1 className="mb-4">Symptom Tracker</h1>
+        <p className="max-w-2xl text-lg leading-relaxed text-brand-800/60">
+          Record a few details each day to notice patterns and make future conversations
+          with your care team more useful.
+        </p>
+      </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+      <div className="grid grid-cols-1 items-start gap-6 lg:grid-cols-2">
         {/* Calendar Section */}
-        <div>
+        <div className="surface-card lg:sticky lg:top-40">
           <Calendar
             selectedDate={selectedDate}
             onDateSelect={handleDateSelect}
@@ -141,8 +149,8 @@ export default function SymptomTrackerPage() {
               onCancel={handleCancel}
             />
           ) : (
-            <div className="rounded-lg border border-brand-200 bg-brand-50 p-6 text-center">
-              <p className="text-brand-700">
+            <div className="soft-panel flex min-h-52 items-center justify-center text-center">
+              <p className="max-w-xs text-brand-700">
                 Select a date on the calendar to log or view your daily symptoms.
               </p>
             </div>

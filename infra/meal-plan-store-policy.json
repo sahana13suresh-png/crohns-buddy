@@ -1,0 +1,19 @@
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Sid": "MealPlanStoreItemAccess",
+      "Effect": "Allow",
+      "Action": [
+        "dynamodb:GetItem",
+        "dynamodb:PutItem",
+        "dynamodb:UpdateItem",
+        "dynamodb:DeleteItem",
+        "dynamodb:Query",
+        "dynamodb:BatchWriteItem",
+        "dynamodb:TransactWriteItems"
+      ],
+      "Resource": "arn:aws:dynamodb:us-east-1:*:table/crohns-buddy-meal-plans"
+    }
+  ]
+}

@@ -110,26 +110,26 @@ export default function AIChatInterface({ currentMealPlan }: AIChatInterfaceProp
   };
 
   return (
-    <div className="mt-8 border border-blue-200 rounded-xl bg-white shadow-sm">
+    <div className="mt-8 overflow-hidden rounded-2xl border border-brand-800/10 bg-white shadow-[0_18px_50px_-35px_rgba(15,34,64,0.4)]">
       {/* Header */}
-      <div className="px-4 py-3 border-b border-blue-100 bg-blue-50 rounded-t-xl">
-        <h3 className="text-lg font-semibold text-blue-800">
+      <div className="border-b border-brand-800/10 bg-brand-800 px-5 py-4">
+        <h3 className="text-lg font-semibold text-white">
           Chat with AI
         </h3>
-        <p className="text-sm text-blue-600">
+        <p className="text-sm text-white/65">
           Ask questions or request changes to your meal plan
         </p>
       </div>
 
       {/* Message List */}
       <div
-        className="px-4 py-4 space-y-4 max-h-96 overflow-y-auto"
+        className="max-h-96 space-y-4 overflow-y-auto bg-brand-50/30 px-5 py-5"
         role="log"
         aria-live="polite"
         aria-label="Chat messages"
       >
         {session.conversationHistory.length === 0 && !session.isLoading && (
-          <p className="text-center text-gray-400 text-sm py-8">
+          <p className="mx-auto max-w-md py-8 text-center text-sm leading-relaxed text-brand-800/40">
             Start a conversation to refine your meal plan. Try asking about substitutions,
             portion adjustments, or new meal ideas.
           </p>
@@ -141,10 +141,10 @@ export default function AIChatInterface({ currentMealPlan }: AIChatInterfaceProp
             className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}
           >
             <div
-              className={`max-w-[80%] rounded-lg px-4 py-2 ${
+              className={`max-w-[80%] rounded-2xl px-4 py-2.5 ${
                 msg.role === 'user'
-                  ? 'bg-blue-600 text-white'
-                  : 'bg-gray-100 text-gray-800 border border-gray-200'
+                  ? 'rounded-br-md bg-brand-700 text-white'
+                  : 'rounded-bl-md border border-brand-800/10 bg-white text-brand-800 shadow-sm'
               }`}
             >
               <p className="text-sm whitespace-pre-wrap">{msg.content}</p>
@@ -155,14 +155,14 @@ export default function AIChatInterface({ currentMealPlan }: AIChatInterfaceProp
         {/* Loading indicator */}
         {session.isLoading && (
           <div className="flex justify-start">
-            <div className="bg-gray-100 border border-gray-200 rounded-lg px-4 py-2">
+            <div className="rounded-2xl rounded-bl-md border border-brand-800/10 bg-white px-4 py-2.5 shadow-sm">
               <div className="flex items-center gap-2">
                 <div className="flex gap-1" aria-label="AI is typing">
-                  <span className="w-2 h-2 bg-blue-400 rounded-full animate-bounce [animation-delay:0ms]" />
-                  <span className="w-2 h-2 bg-blue-400 rounded-full animate-bounce [animation-delay:150ms]" />
-                  <span className="w-2 h-2 bg-blue-400 rounded-full animate-bounce [animation-delay:300ms]" />
+                  <span className="w-2 h-2 bg-brand-400 rounded-full animate-bounce [animation-delay:0ms]" />
+                  <span className="w-2 h-2 bg-brand-400 rounded-full animate-bounce [animation-delay:150ms]" />
+                  <span className="w-2 h-2 bg-brand-400 rounded-full animate-bounce [animation-delay:300ms]" />
                 </div>
-                <span className="text-sm text-gray-500">AI is thinking...</span>
+                <span className="text-sm text-brand-800/45">AI is thinking...</span>
               </div>
             </div>
           </div>
@@ -186,7 +186,7 @@ export default function AIChatInterface({ currentMealPlan }: AIChatInterfaceProp
       )}
 
       {/* Input Area */}
-      <div className="px-4 py-3 border-t border-blue-100 bg-blue-50 rounded-b-xl">
+      <div className="border-t border-brand-800/10 bg-white px-4 py-4">
         <div className="flex gap-2">
           <input
             ref={inputRef}
@@ -196,13 +196,13 @@ export default function AIChatInterface({ currentMealPlan }: AIChatInterfaceProp
             onKeyDown={handleKeyDown}
             placeholder="Ask about your meal plan..."
             disabled={session.isLoading}
-            className="flex-1 px-4 py-2 border border-blue-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 disabled:opacity-50 disabled:cursor-not-allowed"
+            className="field-control flex-1 disabled:cursor-not-allowed disabled:opacity-50"
             aria-label="Chat message input"
           />
           <button
             onClick={handleSendMessage}
             disabled={session.isLoading || !inputValue.trim()}
-            className="px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+            className="btn-primary px-5 py-2.5 disabled:cursor-not-allowed disabled:opacity-50"
             aria-label="Send message"
           >
             Send

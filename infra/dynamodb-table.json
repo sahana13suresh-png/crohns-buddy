@@ -1,0 +1,150 @@
+{
+  "_artifact": "Meal_Plan_Store table definition — committed description, not applied infrastructure.",
+  "_comment": [
+    "This file records the intended shape of the Meal_Plan_Store table so the definition is",
+    "reviewable in git. Nothing in this repository creates the table; provisioning is an",
+    "ordered human step documented in infra/README.md.",
+    "Design reference: .kiro/specs/user-auth-and-cloud-storage/design.md, section 'DynamoDB table schema'.",
+    "The 'createTable' object below is a valid dynamodb:CreateTable request body and can be",
+    "extracted verbatim; every other key is descriptive."
+  ],
+
+  "region": "us-east-1",
+  "_regionRationale": [
+    "Requirement 13.6 places the Meal_Plan_Store in the same region as the AI inference",
+    "endpoint. src/lib/bedrock.ts builds https://bedrock-runtime.${AWS_REGION}.amazonaws.com",
+    "and AWS_REGION defaults to us-east-1, so the table is pinned to us-east-1 and the Vercel",
+    "functions are pinned to iad1. MEAL_PLAN_AWS_REGION must equal AWS_REGION.",
+    "Changing this value alone is not a migration: the table, MEAL_PLAN_AWS_REGION, AWS_REGION,",
+    "the preferredRegion export on every route, and the IAM policy resource ARN move together."
+  ],
+
+  "createTable": {
+    "TableName": "crohns-buddy-meal-plans",
+    "AttributeDefinitions": [
+      { "AttributeName": "userId", "AttributeType": "S" },
+      { "AttributeName": "mealPlanId", "AttributeType": "S" }
+    ],
+    "KeySchema": [
+      { "AttributeName": "userId", "KeyType": "HASH" },
+      { "AttributeName": "mealPlanId", "KeyType": "RANGE" }
+    ],
+    "BillingMode": "PAY_PER_REQUEST",
+    "TableClass": "STANDARD",
+    "SSESpecification": { "Enabled": false },
+    "StreamSpecification": { "StreamEnabled": false },
+    "DeletionProtectionEnabled": true
+  },
+
+  "_keySchemaRationale": [
+    "Requirement 7.1: the owning User_Id is the partition key and the Meal_Plan_Id is the sort",
+    "key, so no record can be stored without an owner and no read can span owners. There is no",
+    "index that would allow a cross-owner read; see 'globalSecondaryIndexes' below."
+  ],
+
+  "_billingModeRationale": [
+    "Requirement 13.3: PAY_PER_REQUEST has no minimum provisioned-capacity charge, so a month",
+    "with zero records and zero requests bills $0.00. Do not switch to PROVISIONED."
+  ],
+
+  "_sseRationale": [
+    "Requirement 12.6: records are kept encrypted at rest. DynamoDB encrypts every table at",
+    "rest unconditionally; SSESpecification only selects which key does it.",
+    "SSESpecification.Enabled=false selects the AWS owned key, which is the default and costs",
+    "$0.00. Setting it to true switches to an AWS managed KMS key and starts billing KMS",
+    "requests, which the cost estimate in docs/hosting.md does not budget for.",
+    "So: 'Enabled: false' means 'encrypted at rest with the AWS owned key', not 'unencrypted'.",
+    "Consequence for verification: DescribeTable omits SSEDescription entirely for an AWS owned",
+    "key, so a smoke check must treat an absent SSEDescription as the expected state rather than",
+    "requiring SSEDescription.Status == 'ENABLED'."
+  ],
+
+  "_deletionProtectionRationale": [
+    "Not required by the spec. Enabled deliberately: this table holds health-related data and",
+    "the only supported way to remove a Patient's records is the Account_Deletion_Flow, which",
+    "deletes items and never the table. Deletion protection blocks dynamodb:DeleteTable only;",
+    "it does not affect DeleteItem, BatchWriteItem, or TransactWriteItems, so Requirement 11.3",
+    "is unaffected."
+  ],
+
+  "globalSecondaryIndexes": [],
+  "localSecondaryIndexes": [],
+  "_indexRationale": [
+    "None. Every access pattern in the design is a GetItem or a Query pinned to one userId",
+    "partition; an index keyed on anything else would create the cross-owner read path that",
+    "Requirement 7.2 forbids, and would add write cost for no functional gain."
+  ],
+
+  "timeToLive": { "Enabled": false },
+  "_ttlRationale": [
+    "Off. Records are removed only on an explicit Patient action (Requirements 8.1, 11.3).",
+    "Silent expiry would delete a Patient's saved plans with no request behind it."
+  ],
+
+  "pointInTimeRecovery": { "PointInTimeRecoveryEnabled": false },
+  "_pitrRationale": [
+    "Off, per the design's table schema and the $0.00 backup line in the cost estimate. PITR is",
+    "off by default, so no post-create call is needed; the checklist step is to confirm it, not",
+    "to change it. PITR is also a continuous copy of health-related data, and the Account",
+    "deletion path in Requirement 11 has no story for purging a Patient from a backup window."
+  ],
+
+  "reservedKeys": {
+    "sortKey": {
+      "#meta": [
+        "One item per Account holding planCount (Requirements 5.8, 5.9) and storageAckAt",
+        "(Requirements 12.3, 12.4). Not a Patient record. '#' (0x23) sorts strictly below every",
+        "Crockford base-32 ULID character, so the listing query excludes it with the key",
+        "condition mealPlanId > '#meta' rather than a post-filter, and Requirement 7.8's",
+        "letters-digits-hyphens charset rejects it before any store access."
+      ]
+    },
+    "partitionKey": {
+      "PENDING#DELETION": [
+        "Holds one item per User_Id whose purge did not complete (Requirement 11.7), keyed by",
+        "that User_Id in the sort key. Not an Account. Cannot collide with a Firebase uid,",
+        "which is 28 alphanumeric characters."
+      ]
+    },
+    "_operatorNote": [
+      "Both are internal bookkeeping. Do not create, edit, or delete them by hand in the",
+      "console: planCount and storageAckAt are maintained transactionally alongside the record",
+      "writes, and editing one out of band breaks the record cap or re-shows the storage notice."
+    ]
+  },
+
+  "recordAttributes": {
+    "userId": "S — partition key, the User_Id derived from the verified Auth_Token",
+    "mealPlanId": "S — sort key, 26-character Crockford base-32 ULID",
+    "title": "S — 1..100 as written by the API",
+    "createdAt": "S — ISO-8601 UTC, exactly 3 fractional digits",
+    "updatedAt": "S — ISO-8601 UTC, exactly 3 fractional digits",
+    "schemaVersion": "N — 1",
+    "content": "M — { meals: L, summary: S, warnings: L (omitted when absent) }",
+    "_collectionNote": [
+      "Every collection is an L list. No SS, NS, or BS attribute appears anywhere, because set",
+      "types are unordered and Requirements 6.4 and 9.3 depend on meal, item, and warning order",
+      "surviving a round trip."
+    ]
+  },
+
+  "operationsGrantedToTheApplication": [
+    "dynamodb:GetItem",
+    "dynamodb:PutItem",
+    "dynamodb:UpdateItem",
+    "dynamodb:DeleteItem",
+    "dynamodb:Query",
+    "dynamodb:BatchWriteItem",
+    "dynamodb:TransactWriteItems"
+  ],
+  "_operationsNote": [
+    "This list mirrors infra/meal-plan-store-policy.json and must stay in step with it.",
+    "dynamodb:DeleteItem is required even though the adapter constructs no DeleteItemCommand:",
+    "removals are Delete entries inside TransactWriteItems and BatchWriteItem, and DynamoDB",
+    "authorizes those entries against dynamodb:DeleteItem.",
+    "dynamodb:Scan is absent by design (Requirements 7.2, 7.5): a Scan is the one DynamoDB",
+    "read that spans partitions, so withholding the permission means no future code path can",
+    "read across Accounts even by mistake. src/lib/server/dynamoMealPlanRepository.ts does not",
+    "import ScanCommand for the same reason."
+  ]
+}

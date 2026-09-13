@@ -130,3 +130,47 @@ export interface ChatSession {
   currentMealPlan: string;
   isLoading: boolean;
 }
+
+// ─── Stored Meal Plans (cloud storage) ─────────────────────────────────────────
+// `MealPlanContent` mirrors `MealPlanResponse['mealPlan']` exactly, so a stored
+// plan renders through the same `MealPlanDisplay` component.
+
+export interface MealPlanItemEntry {
+  name: string;        // 1..200
+  portion: string;     // 1..100
+  notes?: string;      // 0..1000, absent when not present — Req 9.4
+}
+
+export interface MealEntry {
+  mealName: string;              // 1..100
+  items: MealPlanItemEntry[];    // 1..20, order significant
+}
+
+export interface MealPlanContent {
+  meals: MealEntry[];        // 1..10, order significant
+  summary: string;           // 0..5000
+  warnings?: string[];       // 0..20, order significant, absent when none — Req 9.4
+}
+
+export interface MealPlanRecord {
+  userId: string;            // partition key — Req 7.1
+  mealPlanId: string;        // sort key, ULID, 26 chars [0-9A-Z] — Req 7.1, 7.8
+  title: string;             // 1..100 as stored by the API; serializer accepts 1..200
+  createdAt: string;         // ISO-8601 UTC, exactly 3 fractional digits — Req 9.1
+  updatedAt: string;         // ISO-8601 UTC, exactly 3 fractional digits
+  content: MealPlanContent;
+}
+
+export interface MealPlanSummary {   // list projection — Req 6.1
+  mealPlanId: string;
+  title: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface PendingDeletion {   // reserved PENDING#DELETION partition — Req 11.7
+  userId: string;            // User_Id of the removed Account whose records remain
+  attempts: number;          // purge attempts made so far
+  enqueuedAt: string;        // ISO-8601 UTC, exactly 3 fractional digits
+  nextAttemptAt: string;     // ISO-8601 UTC, exactly 3 fractional digits
+}

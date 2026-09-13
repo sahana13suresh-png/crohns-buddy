@@ -1,0 +1,170 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: Private EKS subnets and highly available outbound networking in the existing default VPC.
+
+Parameters:
+  VpcId:
+    Type: AWS::EC2::VPC::Id
+  PublicSubnetA:
+    Type: AWS::EC2::Subnet::Id
+  PublicSubnetB:
+    Type: AWS::EC2::Subnet::Id
+  PublicSubnetC:
+    Type: AWS::EC2::Subnet::Id
+
+Resources:
+  PrivateSubnetA:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId: !Ref VpcId
+      AvailabilityZone: us-east-1a
+      CidrBlock: 172.31.96.0/20
+      MapPublicIpOnLaunch: false
+      Tags:
+        - Key: Name
+          Value: crohns-buddy-eks-private-a
+        - Key: kubernetes.io/role/internal-elb
+          Value: '1'
+        - Key: application
+          Value: crohns-buddy
+
+  PrivateSubnetB:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId: !Ref VpcId
+      AvailabilityZone: us-east-1b
+      CidrBlock: 172.31.112.0/20
+      MapPublicIpOnLaunch: false
+      Tags:
+        - Key: Name
+          Value: crohns-buddy-eks-private-b
+        - Key: kubernetes.io/role/internal-elb
+          Value: '1'
+        - Key: application
+          Value: crohns-buddy
+
+  PrivateSubnetC:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId: !Ref VpcId
+      AvailabilityZone: us-east-1c
+      CidrBlock: 172.31.128.0/20
+      MapPublicIpOnLaunch: false
+      Tags:
+        - Key: Name
+          Value: crohns-buddy-eks-private-c
+        - Key: kubernetes.io/role/internal-elb
+          Value: '1'
+        - Key: application
+          Value: crohns-buddy
+
+  NatAddressA:
+    Type: AWS::EC2::EIP
+    Properties:
+      Domain: vpc
+      Tags:
+        - Key: application
+          Value: crohns-buddy
+  NatAddressB:
+    Type: AWS::EC2::EIP
+    Properties:
+      Domain: vpc
+      Tags:
+        - Key: application
+          Value: crohns-buddy
+  NatAddressC:
+    Type: AWS::EC2::EIP
+    Properties:
+      Domain: vpc
+      Tags:
+        - Key: application
+          Value: crohns-buddy
+
+  NatGatewayA:
+    Type: AWS::EC2::NatGateway
+    Properties:
+      AllocationId: !GetAtt NatAddressA.AllocationId
+      SubnetId: !Ref PublicSubnetA
+      Tags:
+        - Key: application
+          Value: crohns-buddy
+  NatGatewayB:
+    Type: AWS::EC2::NatGateway
+    Properties:
+      AllocationId: !GetAtt NatAddressB.AllocationId
+      SubnetId: !Ref PublicSubnetB
+      Tags:
+        - Key: application
+          Value: crohns-buddy
+  NatGatewayC:
+    Type: AWS::EC2::NatGateway
+    Properties:
+      AllocationId: !GetAtt NatAddressC.AllocationId
+      SubnetId: !Ref PublicSubnetC
+      Tags:
+        - Key: application
+          Value: crohns-buddy
+
+  PrivateRouteTableA:
+    Type: AWS::EC2::RouteTable
+    Properties:
+      VpcId: !Ref VpcId
+      Tags:
+        - Key: Name
+          Value: crohns-buddy-eks-private-a
+  PrivateRouteTableB:
+    Type: AWS::EC2::RouteTable
+    Properties:
+      VpcId: !Ref VpcId
+      Tags:
+        - Key: Name
+          Value: crohns-buddy-eks-private-b
+  PrivateRouteTableC:
+    Type: AWS::EC2::RouteTable
+    Properties:
+      VpcId: !Ref VpcId
+      Tags:
+        - Key: Name
+          Value: crohns-buddy-eks-private-c
+
+  PrivateDefaultRouteA:
+    Type: AWS::EC2::Route
+    Properties:
+      RouteTableId: !Ref PrivateRouteTableA
+      DestinationCidrBlock: 0.0.0.0/0
+      NatGatewayId: !Ref NatGatewayA
+  PrivateDefaultRouteB:
+    Type: AWS::EC2::Route
+    Properties:
+      RouteTableId: !Ref PrivateRouteTableB
+      DestinationCidrBlock: 0.0.0.0/0
+      NatGatewayId: !Ref NatGatewayB
+  PrivateDefaultRouteC:
+    Type: AWS::EC2::Route
+    Properties:
+      RouteTableId: !Ref PrivateRouteTableC
+      DestinationCidrBlock: 0.0.0.0/0
+      NatGatewayId: !Ref NatGatewayC
+
+  PrivateRouteAssociationA:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      RouteTableId: !Ref PrivateRouteTableA
+      SubnetId: !Ref PrivateSubnetA
+  PrivateRouteAssociationB:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      RouteTableId: !Ref PrivateRouteTableB
+      SubnetId: !Ref PrivateSubnetB
+  PrivateRouteAssociationC:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      RouteTableId: !Ref PrivateRouteTableC
+      SubnetId: !Ref PrivateSubnetC
+
+Outputs:
+  PrivateSubnetA:
+    Value: !Ref PrivateSubnetA
+  PrivateSubnetB:
+    Value: !Ref PrivateSubnetB
+  PrivateSubnetC:
+    Value: !Ref PrivateSubnetC

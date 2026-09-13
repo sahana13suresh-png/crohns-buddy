@@ -31,8 +31,7 @@ export async function POST(request: NextRequest): Promise<NextResponse<ModerateR
 
     const apiKey = process.env.PERSPECTIVE_API_KEY;
     if (!apiKey) {
-      // Fail open: allow the message but log the configuration issue
-      console.error('[Moderation] PERSPECTIVE_API_KEY is not configured. Failing open.');
+      // Fail open: allow the message when moderation is not configured.
       return NextResponse.json({ approved: true });
     }
 
@@ -65,17 +64,13 @@ export async function POST(request: NextRequest): Promise<NextResponse<ModerateR
       });
 
       clearTimeout(timeoutId);
-    } catch (error: unknown) {
+    } catch {
       // Fail open: Perspective API is unavailable
-      console.error('[Moderation] Perspective API request failed. Failing open.', error);
       return NextResponse.json({ approved: true });
     }
 
     if (!perspectiveResponse.ok) {
       // Fail open: Perspective API returned an error
-      console.error(
-        `[Moderation] Perspective API returned status ${perspectiveResponse.status}. Failing open.`
-      );
       return NextResponse.json({ approved: true });
     }
 
@@ -84,7 +79,7 @@ export async function POST(request: NextRequest): Promise<NextResponse<ModerateR
     try {
       data = await perspectiveResponse.json();
     } catch {
-      console.error('[Moderation] Failed to parse Perspective API response. Failing open.');
+      // Fail open: the response was not parseable JSON
       return NextResponse.json({ approved: true });
     }
 
@@ -93,7 +88,7 @@ export async function POST(request: NextRequest): Promise<NextResponse<ModerateR
     const attributeScores = data.attributeScores;
 
     if (!attributeScores) {
-      console.error('[Moderation] No attribute scores in Perspective API response. Failing open.');
+      // Fail open: the response carried no scores to threshold against
       return NextResponse.json({ approved: true });
     }
 
@@ -109,9 +104,8 @@ export async function POST(request: NextRequest): Promise<NextResponse<ModerateR
 
     // All scores below threshold — approve the message
     return NextResponse.json({ approved: true });
-  } catch (error: unknown) {
+  } catch {
     // Fail open on any unexpected error
-    console.error('[Moderation] Unexpected error in moderation route. Failing open.', error);
     return NextResponse.json({ approved: true });
   }
 }

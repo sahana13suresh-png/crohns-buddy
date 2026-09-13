@@ -1,0 +1,49 @@
+apiVersion: eksctl.io/v1alpha5
+kind: ClusterConfig
+
+metadata:
+  name: crohns-buddy-auth
+  region: us-east-1
+  version: "1.36"
+
+iam:
+  withOIDC: true
+  vpcResourceControllerPolicy: true
+
+autoModeConfig:
+  enabled: true
+  nodePools:
+    - general-purpose
+    - system
+
+vpc:
+  id: vpc-08ada9f172cc2072f
+  subnets:
+    public:
+      us-east-1a:
+        id: subnet-0ebf312e350e0b340
+      us-east-1b:
+        id: subnet-0c80279729e8d19a3
+      us-east-1c:
+        id: subnet-0c8d55091ff0a79d9
+    private:
+      us-east-1a:
+        id: subnet-0ff794c02430c4286
+      us-east-1b:
+        id: subnet-086342e34ee742153
+      us-east-1c:
+        id: subnet-08c0667170bd78674
+  clusterEndpoints:
+    privateAccess: true
+    publicAccess: true
+  publicAccessCIDRs:
+    - 71.194.25.118/32
+
+cloudWatch:
+  clusterLogging:
+    enableTypes:
+      - api
+      - audit
+      - authenticator
+      - controllerManager
+      - scheduler

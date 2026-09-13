@@ -29,14 +29,14 @@ function RadioQuestion({
   hasError: boolean;
 }) {
   return (
-    <fieldset className={`space-y-2 ${hasError ? 'ring-2 ring-red-300 rounded-lg p-3' : ''}`}>
-      <legend className="text-sm font-medium text-gray-700">{question.label}</legend>
+    <fieldset className={`space-y-3 ${hasError ? 'ring-2 ring-red-200 rounded-xl p-3' : ''}`}>
+      <legend className="text-sm font-semibold text-brand-800/75">{question.label}</legend>
       <div className="flex flex-wrap gap-3">
         {question.options?.map((option) => (
           <label
             key={option}
-            className={`flex items-center gap-2 px-3 py-2 rounded-md border cursor-pointer transition-colors
-              ${value === option ? 'border-brand-500 bg-brand-50 text-brand-700' : 'border-gray-300 hover:border-brand-300'}`}
+            className={`flex cursor-pointer items-center gap-2 rounded-xl border px-3.5 py-2.5 transition-all
+              ${value === option ? 'border-brand-500 bg-brand-50 text-brand-800 shadow-sm' : 'border-brand-800/15 bg-white hover:border-brand-300'}`}
           >
             <input
               type="radio"
@@ -77,14 +77,14 @@ function CheckboxQuestion({
   };
 
   return (
-    <fieldset className={`space-y-2 ${hasError ? 'ring-2 ring-red-300 rounded-lg p-3' : ''}`}>
-      <legend className="text-sm font-medium text-gray-700">{question.label}</legend>
+    <fieldset className={`space-y-3 ${hasError ? 'ring-2 ring-red-200 rounded-xl p-3' : ''}`}>
+      <legend className="text-sm font-semibold text-brand-800/75">{question.label}</legend>
       <div className="flex flex-wrap gap-2">
         {question.options?.map((option) => (
           <label
             key={option}
-            className={`flex items-center gap-2 px-3 py-2 rounded-md border cursor-pointer transition-colors
-              ${selected.includes(option) ? 'border-brand-500 bg-brand-50 text-brand-700' : 'border-gray-300 hover:border-brand-300'}`}
+            className={`flex cursor-pointer items-center gap-2 rounded-xl border px-3.5 py-2.5 transition-all
+              ${selected.includes(option) ? 'border-brand-500 bg-brand-50 text-brand-800 shadow-sm' : 'border-brand-800/15 bg-white hover:border-brand-300'}`}
           >
             <input
               type="checkbox"
@@ -114,7 +114,7 @@ function TextQuestion({
 }) {
   return (
     <div className="space-y-1">
-      <label htmlFor={question.id} className="text-sm font-medium text-gray-700">
+      <label htmlFor={question.id} className="text-sm font-semibold text-brand-800/75">
         {question.label}
       </label>
       <textarea
@@ -123,8 +123,8 @@ function TextQuestion({
         onChange={(e) => onChange(e.target.value)}
         placeholder={question.placeholder}
         rows={3}
-        className={`w-full px-3 py-2 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-brand-500 resize-y
-          ${hasError ? 'border-red-400 ring-2 ring-red-300' : 'border-gray-300'}`}
+        className={`field-control resize-y
+          ${hasError ? 'border-red-400 ring-2 ring-red-200' : ''}`}
       />
       {hasError && <p className="text-red-600 text-xs">This field is required.</p>}
     </div>
@@ -144,7 +144,7 @@ function NumberQuestion({
 }) {
   return (
     <div className="space-y-1">
-      <label htmlFor={question.id} className="text-sm font-medium text-gray-700">
+      <label htmlFor={question.id} className="text-sm font-semibold text-brand-800/75">
         {question.label}
       </label>
       <input
@@ -154,11 +154,11 @@ function NumberQuestion({
         min={question.min}
         max={question.max}
         onChange={(e) => onChange(Number(e.target.value))}
-        className={`w-32 px-3 py-2 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-brand-500
-          ${hasError ? 'border-red-400 ring-2 ring-red-300' : 'border-gray-300'}`}
+        className={`field-control w-32
+          ${hasError ? 'border-red-400 ring-2 ring-red-200' : ''}`}
       />
       {question.min !== undefined && question.max !== undefined && (
-        <p className="text-xs text-gray-500">Range: {question.min} – {question.max}</p>
+        <p className="text-xs text-brand-800/45">Range: {question.min} – {question.max}</p>
       )}
       {hasError && <p className="text-red-600 text-xs">Please enter a valid number.</p>}
     </div>
@@ -202,12 +202,12 @@ function TagInputQuestion({
 
   return (
     <div className="space-y-1">
-      <label htmlFor={question.id} className="text-sm font-medium text-gray-700">
+      <label htmlFor={question.id} className="text-sm font-semibold text-brand-800/75">
         {question.label}
       </label>
       <div
-        className={`flex flex-wrap gap-1 p-2 border rounded-lg min-h-[42px]
-          ${hasError ? 'border-red-400 ring-2 ring-red-300' : 'border-gray-300 focus-within:ring-2 focus-within:ring-brand-500'}`}
+        className={`flex min-h-[48px] flex-wrap gap-1 rounded-xl border bg-white p-2 transition-all
+          ${hasError ? 'border-red-400 ring-2 ring-red-200' : 'border-brand-800/15 focus-within:border-brand-500 focus-within:ring-4 focus-within:ring-brand-200/60'}`}
       >
         {tags.map((tag) => (
           <span
@@ -241,7 +241,7 @@ function TagInputQuestion({
           className="flex-1 min-w-[120px] px-1 py-1 text-sm outline-none"
         />
       </div>
-      <p className="text-xs text-gray-500">Press Enter or comma to add items.</p>
+      <p className="text-xs text-brand-800/45">Press Enter or comma to add items.</p>
       {hasError && <p className="text-red-600 text-xs">Please add at least one item.</p>}
     </div>
   );
@@ -252,7 +252,7 @@ export default function QuizSection({ section, answers, onAnswerChange, showErro
     <div className="space-y-6">
       <div>
         <h3 className="text-lg font-semibold text-brand-800">{section.title}</h3>
-        <p className="text-sm text-gray-600 mt-1">{section.description}</p>
+        <p className="mt-1 text-sm leading-relaxed text-brand-800/55">{section.description}</p>
       </div>
 
       <div className="space-y-5">

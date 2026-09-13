@@ -70,18 +70,18 @@ export default function QuizFlow({ onComplete }: QuizFlowProps) {
   const progressPercent = ((currentSectionIndex + 1) / totalSections) * 100;
 
   return (
-    <div className="max-w-2xl mx-auto space-y-6">
+    <div className="mx-auto max-w-2xl space-y-6">
       {/* Progress Indicator */}
       <div className="space-y-2">
         <div className="flex justify-between items-center text-sm">
           <span className="font-medium text-brand-700">
             Section {currentSectionIndex + 1} of {totalSections}
           </span>
-          <span className="text-gray-500">
+          <span className="text-brand-800/45">
             {totalSections - currentSectionIndex - 1} remaining
           </span>
         </div>
-        <div className="w-full h-2 bg-gray-200 rounded-full overflow-hidden">
+        <div className="h-2 w-full overflow-hidden rounded-full bg-brand-100">
           <div
             className="h-full bg-brand-500 rounded-full transition-all duration-300"
             style={{ width: `${progressPercent}%` }}
@@ -105,7 +105,7 @@ export default function QuizFlow({ onComplete }: QuizFlowProps) {
                 onClick={() => handleGoToSection(index)}
                 aria-label={`Go to ${section.title}${isCompleted ? ' (completed)' : ''}`}
                 className={`w-3 h-3 rounded-full transition-all
-                  ${isActive ? 'bg-brand-600 scale-125' : isCompleted ? 'bg-brand-300' : 'bg-gray-300'}
+                  ${isActive ? 'bg-brand-600 scale-125' : isCompleted ? 'bg-brand-300' : 'bg-brand-800/15'}
                   hover:scale-110`}
               />
             );
@@ -114,7 +114,7 @@ export default function QuizFlow({ onComplete }: QuizFlowProps) {
       </div>
 
       {/* Section Content */}
-      <div className="bg-white rounded-xl border border-gray-200 p-6 shadow-sm">
+      <div className="surface-card p-6 sm:p-8">
         <QuizSection
           section={currentSection}
           answers={currentAnswers}
@@ -129,10 +129,10 @@ export default function QuizFlow({ onComplete }: QuizFlowProps) {
           type="button"
           onClick={handlePrevious}
           disabled={isFirstSection}
-          className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors
+          className={`rounded-full px-5 py-2.5 text-sm font-semibold transition-colors
             ${isFirstSection
-              ? 'text-gray-400 cursor-not-allowed'
-              : 'text-brand-600 hover:bg-brand-50 border border-brand-300'
+              ? 'text-brand-800/30 cursor-not-allowed'
+              : 'border border-brand-800/15 bg-white text-brand-700 hover:border-brand-300 hover:bg-brand-50'
             }`}
         >
           ← Previous
@@ -142,7 +142,7 @@ export default function QuizFlow({ onComplete }: QuizFlowProps) {
           <button
             type="button"
             onClick={handleGenerate}
-            className="px-6 py-2 bg-brand-600 text-white rounded-lg text-sm font-medium hover:bg-brand-700 transition-colors shadow-sm"
+            className="btn-primary"
           >
             Generate Meal Plan
           </button>
@@ -150,7 +150,7 @@ export default function QuizFlow({ onComplete }: QuizFlowProps) {
           <button
             type="button"
             onClick={handleNext}
-            className="px-4 py-2 bg-brand-600 text-white rounded-lg text-sm font-medium hover:bg-brand-700 transition-colors shadow-sm"
+            className="btn-primary"
           >
             Next →
           </button>

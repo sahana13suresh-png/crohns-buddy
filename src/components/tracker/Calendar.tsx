@@ -117,7 +117,7 @@ export default function Calendar({
           type="button"
           onClick={goToPrevMonth}
           aria-label="Previous month"
-          className="p-2 rounded-md text-brand-600 hover:bg-brand-100 transition-colors focus-visible:outline-2 focus-visible:outline-brand-600"
+          className="rounded-full border border-transparent p-2.5 text-brand-700 transition-colors hover:border-brand-200 hover:bg-brand-50 focus-visible:outline-2 focus-visible:outline-brand-600"
         >
           <svg
             xmlns="http://www.w3.org/2000/svg"
@@ -140,7 +140,7 @@ export default function Calendar({
           type="button"
           onClick={goToNextMonth}
           aria-label="Next month"
-          className="p-2 rounded-md text-brand-600 hover:bg-brand-100 transition-colors focus-visible:outline-2 focus-visible:outline-brand-600"
+          className="rounded-full border border-transparent p-2.5 text-brand-700 transition-colors hover:border-brand-200 hover:bg-brand-50 focus-visible:outline-2 focus-visible:outline-brand-600"
         >
           <svg
             xmlns="http://www.w3.org/2000/svg"
@@ -163,7 +163,7 @@ export default function Calendar({
         {DAY_HEADERS.map((day) => (
           <div
             key={day}
-            className="text-center text-xs font-medium text-gray-500 py-1"
+            className="py-2 text-center text-[0.68rem] font-semibold uppercase tracking-wider text-brand-800/45"
             aria-hidden="true"
           >
             {day}
@@ -181,12 +181,12 @@ export default function Calendar({
 
           // Determine styling based on state
           let dayClasses =
-            'relative flex flex-col items-center justify-center w-full aspect-square rounded-md text-sm transition-colors ';
+            'relative flex flex-col items-center justify-center w-full aspect-square rounded-xl text-sm transition-all ';
 
           if (!isCurrentMonth) {
-            dayClasses += 'text-gray-300 cursor-default';
+            dayClasses += 'text-brand-800/20 cursor-default';
           } else if (isFuture) {
-            dayClasses += 'text-gray-400 cursor-not-allowed bg-gray-50';
+            dayClasses += 'text-brand-800/30 cursor-not-allowed bg-brand-50/50';
           } else if (isSelected) {
             dayClasses +=
               'bg-brand-600 text-white font-semibold cursor-pointer shadow-sm';
@@ -195,7 +195,7 @@ export default function Calendar({
               'border-2 border-brand-500 text-brand-700 font-semibold cursor-pointer hover:bg-brand-50';
           } else {
             dayClasses +=
-              'text-gray-700 cursor-pointer hover:bg-brand-50';
+              'text-brand-800/70 cursor-pointer hover:bg-brand-50 hover:text-brand-800';
           }
 
           return (
@@ -240,7 +240,7 @@ export default function Calendar({
       </div>
 
       {/* Legend */}
-      <div className="flex items-center gap-4 mt-4 text-xs text-gray-500">
+      <div className="mt-5 flex flex-wrap items-center gap-4 text-xs text-brand-800/45">
         <div className="flex items-center gap-1">
           <span className="w-2 h-2 rounded-full bg-brand-500" aria-hidden="true" />
           <span>Has entry</span>

@@ -1,30 +1,25 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import Image from 'next/image';
 import TabNavigation, { TabId } from '@/components/TabNavigation';
-import AuthModal from '@/components/AuthModal';
 import WelcomePage from '@/components/pages/WelcomePage';
 import AboutPage from '@/components/pages/AboutPage';
 import SymptomTrackerPage from '@/components/pages/SymptomTrackerPage';
 import MealPlannerPage from '@/components/pages/MealPlannerPage';
+import AccountSettingsPage from '@/components/pages/AccountSettingsPage';
 import ResourcesPage from '@/components/pages/ResourcesPage';
 import ContactPage from '@/components/pages/ContactPage';
-import { onAuthChange, signOut, User } from '@/lib/auth';
+import SavedPlansList from '@/components/planner/SavedPlansList';
 
+/**
+ * The single-page shell. Session state and the account controls live in the
+ * root layout (`AccountMenu` inside `SessionProvider`), so this component holds
+ * no `onAuthChange` subscription of its own — one source of Session state, and
+ * a header that is present on every page rather than only on this one.
+ */
 export default function Home() {
   const [activeTab, setActiveTab] = useState<TabId>('welcome');
-  const [user, setUser] = useState<User | null>(null);
-  const [authModal, setAuthModal] = useState<'login' | 'signup' | null>(null);
-
-  useEffect(() => {
-    const unsubscribe = onAuthChange((u) => setUser(u));
-    return unsubscribe;
-  }, []);
-
-  const handleSignOut = async () => {
-    await signOut();
-  };
 
   const renderTabContent = () => {
     switch (activeTab) {
@@ -35,74 +30,52 @@ export default function Home() {
       case 'tracker':
         return <SymptomTrackerPage />;
       case 'planner':
-        return <MealPlannerPage />;
+        return (
+          <MealPlannerPage
+            renderSavedPlans={(openStoredPlan) => (
+              <SavedPlansList onOpenPlan={openStoredPlan} />
+            )}
+          />
+        );
       case 'resources':
         return <ResourcesPage />;
       case 'contact':
         return <ContactPage />;
+      case 'account':
+        return <AccountSettingsPage />;
       default:
         return <WelcomePage onNavigate={setActiveTab} />;
     }
   };
 
   return (
-    <div className="min-h-screen flex flex-col bg-brand-50">
-      {/* Header */}
-      <header className="border-b border-brand-800/10">
-        <div className="max-w-7xl mx-auto px-6 md:px-12 py-6 flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <Image
-              src="/logo.png"
-              alt="Crohn's Buddy logo"
-              width={56}
-              height={56}
-              priority
-            />
-            <h1 className="text-2xl md:text-3xl font-heading text-brand-800 uppercase tracking-widest">
-              Crohn&#39;s Buddy
-            </h1>
+    <div className="flex-1 flex flex-col">
+      <header className="sticky top-0 z-30 border-b border-brand-800/10 bg-white/85 shadow-[0_8px_30px_-24px_rgba(15,34,64,0.45)] backdrop-blur-xl">
+        <div className="max-w-7xl mx-auto px-5 sm:px-6 lg:px-8 pt-3 lg:pt-4">
+          <div className="flex items-center gap-3 pb-3 lg:pb-4">
+            <div className="flex h-12 w-12 items-center justify-center rounded-2xl border border-brand-200/70 bg-brand-50 shadow-sm">
+              <Image
+                src="/logo.png"
+                alt="Crohn's Buddy logo"
+                width={42}
+                height={42}
+                priority
+              />
+            </div>
+            <div>
+              <p className="display-heading text-xl leading-none sm:text-2xl">
+                Crohn&#39;s Buddy
+              </p>
+              <p className="mt-1 hidden text-xs font-medium text-brand-800/50 sm:block">
+                Everyday support for living well with Crohn&#39;s
+              </p>
+            </div>
           </div>
 
-          {/* Auth buttons */}
-          <div className="flex items-center gap-3">
-            {user ? (
-              <div className="flex items-center gap-4">
-                <span className="text-xs uppercase tracking-widest text-brand-800/60 hidden sm:inline">
-                  {user.displayName || user.email}
-                </span>
-                <button
-                  onClick={handleSignOut}
-                  className="text-xs uppercase tracking-widest text-brand-800/60 hover:text-brand-800 transition-opacity duration-200"
-                >
-                  Log Out
-                </button>
-              </div>
-            ) : (
-              <>
-                <button
-                  onClick={() => setAuthModal('login')}
-                  className="text-xs uppercase tracking-widest text-brand-800/60 hover:text-brand-800 transition-opacity duration-200"
-                >
-                  Log In
-                </button>
-                <button
-                  onClick={() => setAuthModal('signup')}
-                  className="text-xs uppercase tracking-widest text-brand-50 bg-brand-800 px-4 py-2 rounded-sm hover:opacity-80 transition-opacity duration-200"
-                >
-                  Sign Up
-                </button>
-              </>
-            )}
-          </div>
-        </div>
-
-        {/* Navigation */}
-        <div className="max-w-7xl mx-auto px-6 md:px-12 pb-0">
           <TabNavigation activeTab={activeTab} onTabChange={setActiveTab} />
         </div>
       </header>
 
-      {/* Main Content */}
       <main className="flex-1">
         <div
           role="tabpanel"
@@ -113,15 +86,12 @@ export default function Home() {
         </div>
       </main>
 
-      {/* Auth Modal */}
-      {authModal && (
-        <AuthModal
-          mode={authModal}
-          onClose={() => setAuthModal(null)}
-          onSuccess={() => setAuthModal(null)}
-          onSwitchMode={() => setAuthModal(authModal === 'login' ? 'signup' : 'login')}
-        />
-      )}
+      <footer className="mt-auto border-t border-brand-800/10 bg-white/60">
+        <div className="mx-auto flex max-w-7xl flex-col gap-3 px-5 py-7 text-sm text-brand-800/55 sm:px-6 md:flex-row md:items-center md:justify-between lg:px-8">
+          <p>Support, practical tools, and community for the Crohn&#39;s journey.</p>
+          <p>&copy; {new Date().getFullYear()} Crohn&#39;s Buddy</p>
+        </div>
+      </footer>
     </div>
   );
 }

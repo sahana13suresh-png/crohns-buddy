@@ -6,6 +6,7 @@
  */
 
 import { quizSections, QuizSectionConfig } from './quizConfig';
+import type { MealPlanContent } from './types';
 
 /** The shape of all quiz answers: section ID → question ID → answer value */
 export type QuizAnswers = Record<string, Record<string, any>>;
@@ -86,6 +87,44 @@ export function compilePrompt(
       'Keep the meals realistic, simple, and balanced. Include breakfast, lunch, dinner, snacks, and a grocery list. ' +
       'Add a reminder that this is not medical advice and should be reviewed with a doctor or registered dietitian.'
   );
+
+  return lines.join('\n');
+}
+
+/**
+ * Renders a stored Meal_Plan as the plan context for the AI chat
+ * (Requirement 6.7).
+ *
+ * A reopened plan has no quiz answers behind it — only the stored content — so
+ * `compilePrompt` cannot produce its context. The plan itself is the context
+ * instead, written out in the order it is stored: meals, then the items within
+ * each meal, then the warnings. That order is significant (Requirement 6.4), and
+ * the chat sees the same sequence the Patient sees on screen.
+ *
+ * `notes` and `warnings` are omitted when absent rather than rendered as empty
+ * lines, matching the absent-means-absent rule the serializer holds to.
+ */
+export function compileStoredPlanContext(plan: MealPlanContent): string {
+  const lines: string[] = ['Current meal plan:'];
+
+  if (plan.summary.trim().length > 0) {
+    lines.push('', `Summary: ${plan.summary}`);
+  }
+
+  for (const meal of plan.meals) {
+    lines.push('', `${meal.mealName}:`);
+    for (const item of meal.items) {
+      const notes = item.notes === undefined ? '' : ` (${item.notes})`;
+      lines.push(`- ${item.name} — ${item.portion}${notes}`);
+    }
+  }
+
+  if (plan.warnings !== undefined && plan.warnings.length > 0) {
+    lines.push('', 'Warnings:');
+    for (const warning of plan.warnings) {
+      lines.push(`- ${warning}`);
+    }
+  }
 
   return lines.join('\n');
 }

@@ -49,7 +49,7 @@ export default function ChatMessage({ message }: ChatMessageProps) {
 
   if (removed) {
     return (
-      <div className="px-4 py-3 rounded-lg bg-gray-100 border border-gray-200">
+      <div className="rounded-xl border border-gray-200 bg-gray-100 px-4 py-3">
         <div className="flex items-center gap-2 mb-1">
           <span className="font-bold text-sm text-gray-400">{displayName}</span>
           <span className="text-xs text-gray-400">
@@ -64,14 +64,14 @@ export default function ChatMessage({ message }: ChatMessageProps) {
   }
 
   return (
-    <div className="px-4 py-3 rounded-lg bg-white border border-brand-100">
+    <div className="rounded-xl border border-brand-100 bg-white px-4 py-3 shadow-sm">
       <div className="flex items-center gap-2 mb-1">
         <span className="font-bold text-sm text-brand-800">{displayName}</span>
         <span className="text-xs text-gray-500">
           {formatRelativeTime(timestamp)}
         </span>
       </div>
-      <p className="text-sm text-gray-800 whitespace-pre-wrap">{content}</p>
+      <p className="whitespace-pre-wrap text-sm leading-relaxed text-brand-800/75">{content}</p>
     </div>
   );
 }

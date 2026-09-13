@@ -1,6 +1,12 @@
 import { NextResponse } from 'next/server';
 import type { MealPlanRequest, MealPlanResponse } from '@/lib/types';
 import { invokeBedrockClaude } from '@/lib/bedrock';
+import { assertServerEnv } from '@/lib/server/env';
+
+// Evaluated when the module is first loaded, so an absent AI inference credential fails at
+// startup with the group named, uniformly with every other server route, rather than
+// surfacing as a mid-request 500 (Requirements 13.7, 13.11).
+assertServerEnv(['AI_INFERENCE']);
 
 /**
  * POST /api/meal-plan
@@ -8,16 +14,13 @@ import { invokeBedrockClaude } from '@/lib/bedrock';
  * Accepts structured quiz answers from the meal planner quiz,
  * builds a prompt, calls Anthropic Claude via AWS Bedrock, and returns a
  * structured meal plan response.
+ *
+ * The endpoint is deliberately unauthenticated: generation is available with no Session, and
+ * only saving and listing require one (Requirements 5.12, 6.10). Nothing here reads an
+ * identity, and nothing here touches the Meal_Plan_Store.
  */
 export async function POST(request: Request): Promise<NextResponse<MealPlanResponse>> {
   try {
-    if (!process.env.AWS_BEARER_TOKEN_BEDROCK) {
-      return NextResponse.json(
-        { success: false, error: 'AI service is not configured. Please contact support.' },
-        { status: 500 }
-      );
-    }
-
     // Parse and validate request body
     let body: MealPlanRequest;
     try {
@@ -50,7 +53,6 @@ export async function POST(request: Request): Promise<NextResponse<MealPlanRespo
         temperature: 0.7,
       });
     } catch (error: unknown) {
-      console.error('Bedrock API error:', error);
       if (error instanceof Error && error.name === 'ThrottlingException') {
         return NextResponse.json(
           { success: false, error: 'The service is busy. Please wait a moment and try again.' },
@@ -63,8 +65,8 @@ export async function POST(request: Request): Promise<NextResponse<MealPlanRespo
       );
     }
 
-    // Parse the meal plan from the AI response
-    console.log('[meal-plan] AI response length:', content.length, 'Preview:', content.slice(0, 100));
+    // Parse the meal plan from the AI response. The response is never logged: it is
+    // Meal_Plan content, which Requirement 7.6 keeps out of log output entirely.
     const mealPlan = parseMealPlan(content);
     if (!mealPlan) {
       return NextResponse.json(
@@ -74,8 +76,7 @@ export async function POST(request: Request): Promise<NextResponse<MealPlanRespo
     }
 
     return NextResponse.json({ success: true, mealPlan });
-  } catch (err) {
-    console.error('Meal plan route unexpected error:', err);
+  } catch {
     return NextResponse.json(
       { success: false, error: 'An unexpected error occurred. Please try again.' },
       { status: 500 }
@@ -183,6 +184,10 @@ Please generate a ${str(s5.mealPlanDuration, 'daily')} meal plan with ${str(s5.m
 /**
  * Parses the AI-generated content into a structured meal plan.
  * Handles cases where the AI might wrap JSON in code fences or add surrounding text.
+ *
+ * A rejected response is reported by returning `null`, never by logging: the content,
+ * the meal names, and the items are all Meal_Plan content, which Requirement 7.6
+ * excludes from log output. The caller turns `null` into a 502.
  */
 function parseMealPlan(content: string): MealPlanResponse['mealPlan'] | null {
   try {
@@ -202,26 +207,22 @@ function parseMealPlan(content: string): MealPlanResponse['mealPlan'] | null {
 
     // Validate the structure
     if (!parsed.meals || !Array.isArray(parsed.meals) || parsed.meals.length === 0) {
-      console.error('[parseMealPlan] Invalid structure: missing meals array');
       return null;
     }
 
     // Validate each meal has the required fields
     for (const meal of parsed.meals) {
       if (!meal.mealName || !Array.isArray(meal.items) || meal.items.length === 0) {
-        console.error('[parseMealPlan] Invalid meal structure:', meal.mealName);
         return null;
       }
       for (const item of meal.items) {
         if (!item.name || !item.portion) {
-          console.error('[parseMealPlan] Invalid item in meal:', item);
           return null;
         }
       }
     }
 
     if (!parsed.summary || typeof parsed.summary !== 'string') {
-      console.error('[parseMealPlan] Missing or invalid summary');
       return null;
     }
 
@@ -237,8 +238,7 @@ function parseMealPlan(content: string): MealPlanResponse['mealPlan'] | null {
       summary: parsed.summary as string,
       ...(parsed.warnings && Array.isArray(parsed.warnings) ? { warnings: parsed.warnings } : {}),
     };
-  } catch (err) {
-    console.error('[parseMealPlan] JSON parse error:', err, '\nContent preview:', content.slice(0, 200));
+  } catch {
     return null;
   }
 }

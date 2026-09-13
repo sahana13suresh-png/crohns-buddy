@@ -17,15 +17,22 @@ import React from 'react';
  */
 export default function AboutPage() {
   return (
-    <div className="max-w-4xl mx-auto px-4 py-8 space-y-10">
-      <h1 className="text-center mb-8">About Crohn&#39;s Disease</h1>
+    <div className="page-shell max-w-5xl space-y-10">
+      <div className="page-intro">
+        <p className="eyebrow mb-4">Understanding Crohn&#39;s</p>
+        <h1 className="mb-4">About Crohn&#39;s Disease</h1>
+        <p className="max-w-2xl text-lg leading-relaxed text-brand-800/60">
+          Straightforward information to help you understand the condition, common symptoms,
+          and the care options you may discuss with your healthcare team.
+        </p>
+      </div>
 
       {/* Section 1: What is Crohn's Disease */}
       <section aria-labelledby="what-is-crohns">
         <h2 id="what-is-crohns" className="mb-4">
           What is Crohn&#39;s Disease?
         </h2>
-        <div className="card space-y-3">
+        <div className="card space-y-3 leading-relaxed text-brand-800/70">
           <p>
             Crohn&#39;s Disease is a chronic inflammatory condition that affects
             the digestive tract. It belongs to a group of conditions known as
@@ -49,7 +56,7 @@ export default function AboutPage() {
         <h2 id="what-is-ibd" className="mb-4">
           What is Inflammatory Bowel Disease (IBD)?
         </h2>
-        <div className="card space-y-3">
+        <div className="card space-y-3 leading-relaxed text-brand-800/70">
           <p>
             Inflammatory Bowel Disease (IBD) is an umbrella term used to
             describe disorders that involve chronic inflammation of the
@@ -86,7 +93,7 @@ export default function AboutPage() {
         <h2 id="common-symptoms" className="mb-4">
           Common Symptoms
         </h2>
-        <div className="card space-y-3">
+        <div className="card space-y-3 leading-relaxed text-brand-800/70">
           <p>
             Symptoms of Crohn&#39;s Disease can range from mild to severe and
             may develop gradually or come on suddenly. Common symptoms include:
@@ -117,7 +124,7 @@ export default function AboutPage() {
         <h2 id="causes-risk-factors" className="mb-4">
           Causes and Risk Factors
         </h2>
-        <div className="card space-y-3">
+        <div className="card space-y-3 leading-relaxed text-brand-800/70">
           <p>
             The exact cause of Crohn&#39;s Disease is not fully understood, but
             research suggests a combination of factors may contribute to its
@@ -164,7 +171,7 @@ export default function AboutPage() {
         <h2 id="treatment-approaches" className="mb-4">
           Treatment Approaches
         </h2>
-        <div className="card space-y-3">
+        <div className="card space-y-3 leading-relaxed text-brand-800/70">
           <p>
             While there is currently no cure for Crohn&#39;s Disease, several
             treatment approaches can help manage symptoms, reduce inflammation,
@@ -198,7 +205,7 @@ export default function AboutPage() {
             removing damaged sections of the digestive tract or draining
             abscesses.
           </p>
-          <p className="mt-4 p-4 bg-brand-50 rounded-lg border border-brand-200 text-sm">
+          <p className="mt-4 rounded-xl border border-brand-200 bg-brand-50 p-4 text-sm">
             <span className="font-semibold">Important:</span> Always consult
             with your healthcare provider about the best treatment plan for your
             specific situation. Treatment plans are individualized based on the

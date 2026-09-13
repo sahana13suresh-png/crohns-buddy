@@ -6,6 +6,12 @@ import { quizSections } from '@/lib/quizConfig';
 describe('QuizFlow', () => {
   const mockOnComplete = vi.fn();
 
+  // The first section (if any) that still gates advancement, derived from the
+  // quiz config rather than hardcoded.
+  const gatedSectionIndex = quizSections.findIndex((s) =>
+    s.questions.some((q) => q.required)
+  );
+
   beforeEach(() => {
     mockOnComplete.mockClear();
   });
@@ -40,18 +46,42 @@ describe('QuizFlow', () => {
     expect(screen.queryByText('Generate Meal Plan')).not.toBeInTheDocument();
   });
 
-  it('prevents advancement when required questions are unanswered', () => {
+  it('advances past the first section with nothing answered, because none of its questions are required', () => {
+    // Guard the premise: if section 1 ever gains a required question this
+    // assertion fails first and points at the real behavioural change.
+    expect(quizSections[0].questions.every((q) => !q.required)).toBe(true);
+
     render(<QuizFlow onComplete={mockOnComplete} />);
     fireEvent.click(screen.getByText('Next →'));
-    // Should still be on section 1
-    expect(screen.getByText('Section 1 of 6')).toBeInTheDocument();
+
+    expect(screen.getByText(`Section 2 of ${quizSections.length}`)).toBeInTheDocument();
+    expect(screen.getByText(quizSections[1].title)).toBeInTheDocument();
   });
 
-  it('shows error messages when trying to advance without answering', () => {
+  it('blocks advancement with a validation message only where a section has required questions', () => {
     render(<QuizFlow onComplete={mockOnComplete} />);
-    fireEvent.click(screen.getByText('Next →'));
-    // Error messages should appear for unanswered required questions
-    expect(screen.getAllByText(/please/i).length).toBeGreaterThan(0);
+
+    if (gatedSectionIndex === -1) {
+      // Every question in the quiz is currently optional, so Next always
+      // advances and no validation copy is rendered.
+      fireEvent.click(screen.getByText('Next →'));
+      expect(screen.queryByText(/please select|please enter|please add|is required/i)).not.toBeInTheDocument();
+      expect(screen.getByText(`Section 2 of ${quizSections.length}`)).toBeInTheDocument();
+      return;
+    }
+
+    // Jump to the first section that still gates and try to leave it unanswered.
+    fireEvent.click(
+      screen.getByLabelText(new RegExp(`Go to ${quizSections[gatedSectionIndex].title}`))
+    );
+    fireEvent.click(screen.queryByText('Next →') ?? screen.getByText('Generate Meal Plan'));
+
+    expect(
+      screen.getByText(`Section ${gatedSectionIndex + 1} of ${quizSections.length}`)
+    ).toBeInTheDocument();
+    expect(
+      screen.getAllByText(/please select|please enter|please add|is required/i).length
+    ).toBeGreaterThan(0);
   });
 
   it('allows navigation back to previous sections', () => {

@@ -131,9 +131,10 @@ describe('compilePrompt', () => {
   it('should include labels for all 24 questions', () => {
     const prompt = compilePrompt(completeAnswers);
     // Each section has 4 questions = 24 lines with ":" separator for answers
-    const answerLines = prompt
-      .split('\n')
-      .filter((line) => line.includes(':') && !line.startsWith('Create') && !line.startsWith('Use') && !line.startsWith('Add') && !line.startsWith('Keep'));
+    // Only the answer lines carry a ":" — the opening line and the closing
+    // instructions have none — so the colon alone identifies them. Excluding
+    // lines by prefix would also drop the "Additional notes" answer.
+    const answerLines = prompt.split('\n').filter((line) => line.includes(':'));
     expect(answerLines.length).toBe(24);
   });
 });

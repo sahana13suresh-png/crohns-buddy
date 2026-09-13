@@ -57,6 +57,24 @@ export function deleteEntry(date: string): void {
 }
 
 /**
+ * Removes every tracker entry held in the browser on this device.
+ *
+ * Used by the Account_Deletion_Flow, which clears the device-local entries
+ * after the Account is removed (Requirement 11.3). It never throws: a storage
+ * write denied by the browser leaves the entries where they were, and the
+ * deletion flow has already removed the Account by the time it is called, so
+ * there is nothing useful to abort.
+ */
+export function clearAllEntries(): void {
+  if (typeof window === 'undefined') return;
+  try {
+    localStorage.removeItem(STORAGE_KEY);
+  } catch {
+    // Storage denied. Nothing further to do here.
+  }
+}
+
+/**
  * Returns an array of date strings that have entries.
  * Useful for highlighting days on the calendar.
  */

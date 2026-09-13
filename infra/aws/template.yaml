@@ -1,0 +1,602 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: Crohn's Buddy production hosting, selectable Logto or Cognito authentication, data store, scheduled cleanup, and cost guardrail.
+
+Parameters:
+  DeployHosting:
+    Type: String
+    Default: 'false'
+    AllowedValues:
+      - 'true'
+      - 'false'
+    Description: Create Amplify hosting after the CodeCommit repository contains the application.
+  EnableSocialIdentityProviders:
+    Type: String
+    Default: 'false'
+    AllowedValues:
+      - 'true'
+      - 'false'
+    Description: Explicit security gate for social federation, which can create new user profiles.
+  AuthProvider:
+    Type: String
+    Default: cognito
+    AllowedValues:
+      - cognito
+      - logto
+    Description: Authentication provider used by the application during the migration.
+  LogtoEndpoint:
+    Type: String
+    Default: https://auth.crohns-buddy.com
+  LogtoApplicationId:
+    Type: String
+    Default: ''
+  LogtoApplicationSecret:
+    Type: String
+    NoEcho: true
+    Default: ''
+  LogtoManagementApplicationId:
+    Type: String
+    Default: ''
+  LogtoManagementApplicationSecret:
+    Type: String
+    NoEcho: true
+    Default: ''
+  LogtoSocialProviders:
+    Type: String
+    Default: google
+    Description: Comma-separated Logto social connector targets exposed by the application.
+  RepositoryName:
+    Type: String
+    Default: crohns-buddy-deploy
+  TableName:
+    Type: String
+    Default: crohns-buddy-meal-plans
+  BedrockModelId:
+    Type: String
+    Default: us.anthropic.claude-sonnet-4-6
+  BedrockGuardrailId:
+    Type: String
+    Default: 6vwvhqpr4sj7
+  BedrockGuardrailVersion:
+    Type: String
+    Default: '3'
+  CronSecret:
+    Type: String
+    NoEcho: true
+    MinLength: 32
+  AlertEmail:
+    Type: String
+    Default: sahana13suresh@gmail.com
+  CustomDomainUrl:
+    Type: String
+    Default: https://www.crohns-buddy.com
+  AmplifyProductionUrl:
+    Type: String
+    Default: https://main.d3cd4v50t3kv7.amplifyapp.com
+  LocalDevelopmentUrl:
+    Type: String
+    Default: http://127.0.0.1:3000
+  CognitoDomainPrefix:
+    Type: String
+    Default: crohns-buddy-853513360253
+    AllowedPattern: '^[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?$'
+  GoogleClientId:
+    Type: String
+    Default: ''
+  GoogleClientSecret:
+    Type: String
+    NoEcho: true
+    Default: ''
+  FacebookClientId:
+    Type: String
+    Default: ''
+  FacebookClientSecret:
+    Type: String
+    NoEcho: true
+    Default: ''
+  FacebookApiVersion:
+    Type: String
+    Default: v21.0
+  PerspectiveApiKey:
+    Type: String
+    NoEcho: true
+    Default: ''
+
+Conditions:
+  HostingEnabled: !Equals [!Ref DeployHosting, 'true']
+  UseLogtoAuth: !Equals [!Ref AuthProvider, 'logto']
+  HasAlertEmail: !Not [!Equals [!Ref AlertEmail, '']]
+  HasGoogleProvider: !And
+    - !Equals [!Ref EnableSocialIdentityProviders, 'true']
+    - !Not [!Equals [!Ref GoogleClientId, '']]
+    - !Not [!Equals [!Ref GoogleClientSecret, '']]
+  EnableGoogleInApp: !Or
+    - !Condition UseLogtoAuth
+    - !Condition HasGoogleProvider
+  HasFacebookProvider: !And
+    - !Equals [!Ref EnableSocialIdentityProviders, 'true']
+    - !Not [!Equals [!Ref FacebookClientId, '']]
+    - !Not [!Equals [!Ref FacebookClientSecret, '']]
+Resources:
+  SourceRepository:
+    Type: AWS::CodeCommit::Repository
+    Properties:
+      RepositoryName: !Ref RepositoryName
+      RepositoryDescription: Deployment source for Crohn's Buddy.
+      Tags:
+        - Key: application
+          Value: crohns-buddy
+
+  MealPlanTable:
+    Type: AWS::DynamoDB::Table
+    DeletionPolicy: Retain
+    UpdateReplacePolicy: Retain
+    Properties:
+      TableName: !Ref TableName
+      BillingMode: PAY_PER_REQUEST
+      TableClass: STANDARD
+      DeletionProtectionEnabled: true
+      AttributeDefinitions:
+        - AttributeName: userId
+          AttributeType: S
+        - AttributeName: mealPlanId
+          AttributeType: S
+      KeySchema:
+        - AttributeName: userId
+          KeyType: HASH
+        - AttributeName: mealPlanId
+          KeyType: RANGE
+      PointInTimeRecoverySpecification:
+        PointInTimeRecoveryEnabled: false
+      Tags:
+        - Key: application
+          Value: crohns-buddy
+
+  LogtoManagementCredentials:
+    Type: AWS::SecretsManager::Secret
+    DeletionPolicy: Retain
+    UpdateReplacePolicy: Retain
+    Properties:
+      Name: !Sub ${AWS::StackName}/logto-management
+      Description: Runtime credentials for Crohn's Buddy account deletion.
+      SecretString: !Sub >-
+        {"endpoint":"${LogtoEndpoint}","clientId":"${LogtoManagementApplicationId}","clientSecret":"${LogtoManagementApplicationSecret}"}
+      Tags:
+        - Key: application
+          Value: crohns-buddy
+
+  UserPool:
+    Type: AWS::Cognito::UserPool
+    DeletionPolicy: Retain
+    UpdateReplacePolicy: Retain
+    Properties:
+      UserPoolName: crohns-buddy
+      DeletionProtection: ACTIVE
+      UserPoolTier: ESSENTIALS
+      UsernameAttributes:
+        - email
+      UsernameConfiguration:
+        CaseSensitive: false
+      AutoVerifiedAttributes:
+        - email
+      AccountRecoverySetting:
+        RecoveryMechanisms:
+          - Name: verified_email
+            Priority: 1
+      AdminCreateUserConfig:
+        AllowAdminCreateUserOnly: true
+      MfaConfiguration: OPTIONAL
+      EnabledMfas:
+        - SOFTWARE_TOKEN_MFA
+      Policies:
+        PasswordPolicy:
+          MinimumLength: 12
+          RequireLowercase: true
+          RequireNumbers: true
+          RequireSymbols: true
+          RequireUppercase: true
+          TemporaryPasswordValidityDays: 7
+      UserAttributeUpdateSettings:
+        AttributesRequireVerificationBeforeUpdate:
+          - email
+      VerificationMessageTemplate:
+        DefaultEmailOption: CONFIRM_WITH_CODE
+      EmailVerificationSubject: Verify your Crohn's Buddy account
+      EmailVerificationMessage: 'Your Crohn''s Buddy verification code is {####}.'
+      UserPoolTags:
+        application: crohns-buddy
+
+  CognitoDomain:
+    Type: AWS::Cognito::UserPoolDomain
+    Properties:
+      Domain: !Ref CognitoDomainPrefix
+      UserPoolId: !Ref UserPool
+      ManagedLoginVersion: 2
+
+  GoogleIdentityProvider:
+    Type: AWS::Cognito::UserPoolIdentityProvider
+    Condition: HasGoogleProvider
+    Properties:
+      ProviderName: Google
+      ProviderType: Google
+      UserPoolId: !Ref UserPool
+      ProviderDetails:
+        client_id: !Ref GoogleClientId
+        client_secret: !Ref GoogleClientSecret
+        authorize_scopes: openid email profile
+      AttributeMapping:
+        email: email
+        name: name
+        username: sub
+
+  FacebookIdentityProvider:
+    Type: AWS::Cognito::UserPoolIdentityProvider
+    Condition: HasFacebookProvider
+    Properties:
+      ProviderName: Facebook
+      ProviderType: Facebook
+      UserPoolId: !Ref UserPool
+      ProviderDetails:
+        client_id: !Ref FacebookClientId
+        client_secret: !Ref FacebookClientSecret
+        authorize_scopes: public_profile, email
+        api_version: !Ref FacebookApiVersion
+      AttributeMapping:
+        email: email
+        name: name
+        username: id
+
+  UserPoolClient:
+    Type: AWS::Cognito::UserPoolClient
+    Properties:
+      ClientName: crohns-buddy-web
+      UserPoolId: !Ref UserPool
+      GenerateSecret: false
+      AllowedOAuthFlowsUserPoolClient: true
+      AllowedOAuthFlows:
+        - code
+      AllowedOAuthScopes:
+        - openid
+        - email
+        - profile
+        - aws.cognito.signin.user.admin
+      CallbackURLs:
+        - !Sub ${CustomDomainUrl}/api/auth/callback
+        - !Sub ${AmplifyProductionUrl}/api/auth/callback
+        - !Sub ${LocalDevelopmentUrl}/api/auth/callback
+      LogoutURLs:
+        - !Sub ${CustomDomainUrl}/
+        - !Sub ${AmplifyProductionUrl}/
+        - !Sub ${LocalDevelopmentUrl}/
+      SupportedIdentityProviders:
+        - COGNITO
+        - !If [HasGoogleProvider, !Ref GoogleIdentityProvider, !Ref 'AWS::NoValue']
+        - !If [HasFacebookProvider, !Ref FacebookIdentityProvider, !Ref 'AWS::NoValue']
+      PreventUserExistenceErrors: ENABLED
+      EnableTokenRevocation: true
+      AccessTokenValidity: 60
+      IdTokenValidity: 60
+      RefreshTokenValidity: 30
+      TokenValidityUnits:
+        AccessToken: minutes
+        IdToken: minutes
+        RefreshToken: days
+      RefreshTokenRotation:
+        Feature: ENABLED
+        RetryGracePeriodSeconds: 10
+      AuthSessionValidity: 3
+      ExplicitAuthFlows:
+        - ALLOW_USER_SRP_AUTH
+        - ALLOW_USER_AUTH
+        - ALLOW_USER_PASSWORD_AUTH
+
+  ManagedLoginBranding:
+    Type: AWS::Cognito::ManagedLoginBranding
+    DependsOn: CognitoDomain
+    Properties:
+      UserPoolId: !Ref UserPool
+      ClientId: !Ref UserPoolClient
+      UseCognitoProvidedValues: true
+
+  AmplifyServiceRole:
+    Type: AWS::IAM::Role
+    Properties:
+      Description: Allows Amplify Hosting to pull the Crohn's Buddy CodeCommit repository.
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: amplify.amazonaws.com
+            Action: sts:AssumeRole
+      Policies:
+        - PolicyName: PullDeploymentSource
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action:
+                  - codecommit:GitPull
+                Resource: !GetAtt SourceRepository.Arn
+
+  AmplifyComputeRole:
+    Type: AWS::IAM::Role
+    Properties:
+      Description: Least-privilege runtime access for Crohn's Buddy SSR routes.
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: amplify.amazonaws.com
+            Action: sts:AssumeRole
+      Policies:
+        - PolicyName: CrohnsBuddyRuntime
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Sid: MealPlanStoreItemAccess
+                Effect: Allow
+                Action:
+                  - dynamodb:GetItem
+                  - dynamodb:PutItem
+                  - dynamodb:UpdateItem
+                  - dynamodb:DeleteItem
+                  - dynamodb:Query
+                  - dynamodb:BatchWriteItem
+                  - dynamodb:TransactWriteItems
+                Resource: !GetAtt MealPlanTable.Arn
+              - Sid: BedrockInference
+                Effect: Allow
+                Action:
+                  - bedrock:InvokeModel
+                  - bedrock:InvokeModelWithResponseStream
+                Resource:
+                  - arn:aws:bedrock:*::foundation-model/*
+                  - !Sub arn:${AWS::Partition}:bedrock:*:${AWS::AccountId}:inference-profile/*
+              - Sid: ApplyCrohnsScopeGuardrail
+                Effect: Allow
+                Action:
+                  - bedrock:ApplyGuardrail
+                Resource: !Sub arn:${AWS::Partition}:bedrock:${AWS::Region}:${AWS::AccountId}:guardrail/${BedrockGuardrailId}
+              - Sid: ReadLogtoManagementCredentials
+                Effect: Allow
+                Action:
+                  - secretsmanager:GetSecretValue
+                Resource: !Ref LogtoManagementCredentials
+
+  MonthlyCostBudget:
+    Type: AWS::Budgets::Budget
+    Condition: HasAlertEmail
+    Properties:
+      Budget:
+        BudgetName: CrohnsBuddyMonthlyCost
+        BudgetType: COST
+        TimeUnit: MONTHLY
+        BudgetLimit:
+          Amount: 20
+          Unit: USD
+      NotificationsWithSubscribers:
+        - Notification:
+            NotificationType: ACTUAL
+            ComparisonOperator: GREATER_THAN
+            Threshold: 100
+            ThresholdType: PERCENTAGE
+          Subscribers:
+            - SubscriptionType: EMAIL
+              Address: !Ref AlertEmail
+
+  AmplifyApp:
+    Type: AWS::Amplify::App
+    Condition: HostingEnabled
+    Properties:
+      Name: crohns-buddy
+      Description: Crohn's Buddy Next.js application.
+      Platform: WEB_COMPUTE
+      Repository: !GetAtt SourceRepository.CloneUrlHttp
+      IAMServiceRole: !GetAtt AmplifyServiceRole.Arn
+      ComputeRoleArn: !GetAtt AmplifyComputeRole.Arn
+      EnableBranchAutoDeletion: true
+      JobConfig:
+        BuildComputeType: STANDARD_8GB
+      BuildSpec: |
+        version: 1
+        frontend:
+          phases:
+            preBuild:
+              commands:
+                - npm ci
+                - env | grep -E '^(MEAL_PLAN_TABLE_NAME|MEAL_PLAN_AWS_REGION|BEDROCK_MODEL_ID|BEDROCK_GUARDRAIL_|CRON_SECRET|PERSPECTIVE_API_KEY|NEXT_PUBLIC_AUTH_|AUTH_PROVIDER|LOGTO_|COGNITO_|AUTH_ALLOWED_ORIGINS|AUTH_SOCIAL_PROVIDERS|AUTH_SELF_REGISTRATION_ENABLED)=' >> .env.production
+            build:
+              commands:
+                - npm run build
+          artifacts:
+            baseDirectory: .next
+            files:
+              - '**/*'
+          cache:
+            paths:
+              - .next/cache/**/*
+              - node_modules/**/*
+      EnvironmentVariables:
+        - Name: MEAL_PLAN_TABLE_NAME
+          Value: !Ref MealPlanTable
+        - Name: MEAL_PLAN_AWS_REGION
+          Value: !Ref AWS::Region
+        - Name: BEDROCK_MODEL_ID
+          Value: !Ref BedrockModelId
+        - Name: BEDROCK_GUARDRAIL_ID
+          Value: !Ref BedrockGuardrailId
+        - Name: BEDROCK_GUARDRAIL_VERSION
+          Value: !Ref BedrockGuardrailVersion
+        - Name: CRON_SECRET
+          Value: !Ref CronSecret
+        - Name: PERSPECTIVE_API_KEY
+          Value: !Ref PerspectiveApiKey
+        - Name: NEXT_PUBLIC_AUTH_ENABLED
+          Value: 'true'
+        - Name: NEXT_PUBLIC_AUTH_FLOW
+          Value: redirect
+        - Name: NEXT_PUBLIC_AUTH_SELF_REGISTRATION_ENABLED
+          Value: !If [UseLogtoAuth, 'true', 'false']
+        - Name: NEXT_PUBLIC_AUTH_PROVIDERS
+          Value: !If
+            - UseLogtoAuth
+            - !Ref LogtoSocialProviders
+            - !Join
+              - ','
+              - - !If [EnableGoogleInApp, google, '']
+                - !If [HasFacebookProvider, facebook, '']
+        - Name: COGNITO_AWS_REGION
+          Value: !Ref AWS::Region
+        - Name: COGNITO_USER_POOL_ID
+          Value: !Ref UserPool
+        - Name: COGNITO_CLIENT_ID
+          Value: !Ref UserPoolClient
+        - Name: COGNITO_DOMAIN
+          Value: !Sub https://${CognitoDomainPrefix}.auth.${AWS::Region}.amazoncognito.com
+        - Name: AUTH_PROVIDER
+          Value: !Ref AuthProvider
+        - Name: LOGTO_ENDPOINT
+          Value: !Ref LogtoEndpoint
+        - Name: LOGTO_APP_ID
+          Value: !Ref LogtoApplicationId
+        - Name: LOGTO_APP_SECRET
+          Value: !Ref LogtoApplicationSecret
+        - Name: AUTH_ALLOWED_ORIGINS
+          Value: !Join
+            - ','
+            - - !Ref CustomDomainUrl
+              - !Ref AmplifyProductionUrl
+        - Name: AUTH_SOCIAL_PROVIDERS
+          Value: !If
+            - UseLogtoAuth
+            - !Ref LogtoSocialProviders
+            - !Join
+              - ','
+              - - !If [EnableGoogleInApp, Google, '']
+                - !If [HasFacebookProvider, Facebook, '']
+        - Name: AUTH_SELF_REGISTRATION_ENABLED
+          Value: !If [UseLogtoAuth, 'true', 'false']
+      Tags:
+        - Key: application
+          Value: crohns-buddy
+
+  ProductionBranch:
+    Type: AWS::Amplify::Branch
+    Condition: HostingEnabled
+    Properties:
+      AppId: !GetAtt AmplifyApp.AppId
+      BranchName: main
+      Description: Production branch.
+      Stage: PRODUCTION
+      Framework: Next.js - SSR
+      EnableAutoBuild: true
+      EnableSkewProtection: true
+      ComputeRoleArn: !GetAtt AmplifyComputeRole.Arn
+
+  SweepFunctionRole:
+    Type: AWS::IAM::Role
+    Condition: HostingEnabled
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: lambda.amazonaws.com
+            Action: sts:AssumeRole
+      Policies:
+        - PolicyName: WriteSweepLogs
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action:
+                  - logs:CreateLogGroup
+                  - logs:CreateLogStream
+                  - logs:PutLogEvents
+                Resource: !Sub arn:${AWS::Partition}:logs:${AWS::Region}:${AWS::AccountId}:log-group:/aws/lambda/crohns-buddy-pending-deletion-sweep:*
+
+  SweepFunction:
+    Type: AWS::Lambda::Function
+    Condition: HostingEnabled
+    Properties:
+      FunctionName: crohns-buddy-pending-deletion-sweep
+      Description: Invokes the authenticated Crohn's Buddy pending-deletion sweep.
+      Runtime: nodejs22.x
+      Handler: index.handler
+      Role: !GetAtt SweepFunctionRole.Arn
+      Timeout: 30
+      MemorySize: 128
+      Environment:
+        Variables:
+          SWEEP_URL: !Sub https://main.${AmplifyApp.DefaultDomain}/api/internal/pending-deletion-sweep
+          CRON_SECRET: !Ref CronSecret
+      Code:
+        ZipFile: |
+          exports.handler = async () => {
+            const response = await fetch(process.env.SWEEP_URL, {
+              method: 'POST',
+              headers: {
+                authorization: `Bearer ${process.env.CRON_SECRET}`,
+              },
+            });
+            const body = await response.text();
+            if (!response.ok) {
+              throw new Error(`Sweep returned HTTP ${response.status}: ${body.slice(0, 500)}`);
+            }
+            console.log(JSON.stringify({ statusCode: response.status, body }));
+            return { statusCode: response.status };
+          };
+      Tags:
+        - Key: application
+          Value: crohns-buddy
+
+  DailySweepRule:
+    Type: AWS::Events::Rule
+    Condition: HostingEnabled
+    Properties:
+      Name: crohns-buddy-daily-pending-deletion-sweep
+      Description: Runs the pending deletion sweep once daily at 03:00 UTC.
+      ScheduleExpression: cron(0 3 * * ? *)
+      State: ENABLED
+      Targets:
+        - Id: PendingDeletionSweep
+          Arn: !GetAtt SweepFunction.Arn
+          RetryPolicy:
+            MaximumEventAgeInSeconds: 3600
+            MaximumRetryAttempts: 2
+
+  AllowEventBridgeSweepInvocation:
+    Type: AWS::Lambda::Permission
+    Condition: HostingEnabled
+    Properties:
+      Action: lambda:InvokeFunction
+      FunctionName: !Ref SweepFunction
+      Principal: events.amazonaws.com
+      SourceArn: !GetAtt DailySweepRule.Arn
+
+Outputs:
+  RepositoryCloneUrl:
+    Description: HTTPS clone URL for deployment source.
+    Value: !GetAtt SourceRepository.CloneUrlHttp
+  MealPlanTableName:
+    Value: !Ref MealPlanTable
+  AmplifyComputeRoleArn:
+    Value: !GetAtt AmplifyComputeRole.Arn
+  AmplifyAppId:
+    Condition: HostingEnabled
+    Value: !GetAtt AmplifyApp.AppId
+  ProductionUrl:
+    Condition: HostingEnabled
+    Value: !Sub https://main.${AmplifyApp.DefaultDomain}
+  CognitoUserPoolId:
+    Value: !Ref UserPool
+  CognitoUserPoolClientId:
+    Value: !Ref UserPoolClient
+  CognitoManagedLoginUrl:
+    Value: !Sub https://${CognitoDomainPrefix}.auth.${AWS::Region}.amazoncognito.com
+  GoogleSocialLoginStatus:
+    Value: !If [HasGoogleProvider, ENABLED, AWAITING_PROVIDER_CREDENTIALS]
+  FacebookSocialLoginStatus:
+    Value: !If [HasFacebookProvider, ENABLED, AWAITING_PROVIDER_CREDENTIALS]
