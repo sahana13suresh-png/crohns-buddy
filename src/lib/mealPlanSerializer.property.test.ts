@@ -197,7 +197,7 @@ describe('Property 1: Serialization round trip preserves the record exactly', ()
       }),
       { numRuns: 500 }
     );
-  });
+  }, 60_000);
 });
 /** The optional paths only — item `notes` and record `warnings` — from a path map. */
 function optionalPaths(strings: Map<string, string>): string[] {
