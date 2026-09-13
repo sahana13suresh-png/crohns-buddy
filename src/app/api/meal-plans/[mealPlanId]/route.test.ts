@@ -37,7 +37,6 @@ describe('/api/meal-plans/[mealPlanId] route module', () => {
 
     expect(route.runtime).toBe('nodejs');
     expect(route.dynamic).toBe('force-dynamic');
-    expect(route.preferredRegion).toBe('iad1');
   });
 
   it('exports GET, PUT, PATCH, and DELETE handlers', async () => {

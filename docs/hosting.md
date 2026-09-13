@@ -63,9 +63,8 @@ and prompt usage.
 
 ## Commercial use
 
-AWS Amplify is a metered AWS service and does not carry the former Vercel Hobby
-non-commercial-use restriction. Use remains subject to the AWS Customer Agreement and the
-terms for each configured service.
+AWS Amplify is a metered AWS service. Use remains subject to the AWS Customer
+Agreement and the terms for each configured service.
 
 ## Operations
 

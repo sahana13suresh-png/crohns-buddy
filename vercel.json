@@ -1,8 +1,0 @@
-{
-  "crons": [
-    {
-      "path": "/api/internal/pending-deletion-sweep",
-      "schedule": "0 3 * * *"
-    }
-  ]
-}

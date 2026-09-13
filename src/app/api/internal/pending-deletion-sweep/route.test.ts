@@ -1,7 +1,7 @@
 /**
  * Route-level tests for the pending-deletion sweep endpoint (Requirement 11.7).
  * The sweep's own behavior is covered alongside the sweep module; what is left here is the
- * route surface: both methods refuse an unauthenticated caller, the segment config is
+ * route surface: POST refuses an unauthenticated caller, the segment config is
  * pinned, and the module fails evaluation when the store credential group is incomplete
  * (Requirements 13.7, 13.11).
  */
@@ -23,9 +23,9 @@ async function loadRoute(): Promise<typeof import('./route')> {
   return import('./route');
 }
 
-function sweepRequest(method: 'GET' | 'POST'): Request {
+function sweepRequest(): Request {
   return new Request('https://example.test/api/internal/pending-deletion-sweep', {
-    method,
+    method: 'POST',
     headers: { Authorization: 'Bearer not-the-secret' },
   });
 }
@@ -39,11 +39,11 @@ afterEach(() => {
   vi.unstubAllEnvs();
 });
 
-describe('POST and GET', () => {
-  it.each(['POST', 'GET'] as const)('refuses an unauthorized %s with the frozen 401', async (method) => {
+describe('POST', () => {
+  it('refuses an unauthorized request with the frozen 401', async () => {
     const route = await loadRoute();
 
-    const response = await route[method](sweepRequest(method));
+    const response = await route.POST(sweepRequest());
 
     expect(response.status).toBe(401);
     expect(await response.json()).toStrictEqual(CREDENTIAL_ERROR_BODY);
@@ -54,7 +54,6 @@ describe('POST and GET', () => {
 
     expect(route.runtime).toBe('nodejs');
     expect(route.dynamic).toBe('force-dynamic');
-    expect(route.preferredRegion).toBe('iad1');
   });
 });
 

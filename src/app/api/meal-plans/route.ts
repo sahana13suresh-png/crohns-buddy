@@ -19,12 +19,10 @@ import {
 } from '@/lib/server/mealPlansRouteHandlers';
 import { withAuth } from '@/lib/server/withAuth';
 
-// The AWS SDK needs Node's crypto for SigV4, the responses are per-Patient so nothing may
-// be cached or statically rendered, and the function is pinned to the DynamoDB region so a
-// store round trip stays in-region (Requirement 13.6).
+// The AWS SDK needs Node's crypto for SigV4, and the responses are per-Patient so nothing may
+// be cached or statically rendered.
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
-export const preferredRegion = 'iad1';
 
 // Evaluated when the module is first loaded, so an absent credential fails at startup with
 // every incomplete group named, rather than surfacing mid-request as an opaque signing
